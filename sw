@@ -1,6 +1,6 @@
 -- Quest / เควส
 _G.Quest = { 
-    ['RGB Aura Haki'] = false,
+    ['RGB Aura Haki'] = true,
     ['Pull Lever'] = true,
     ['Quest Dough Awaken'] = false
 }
@@ -19,9 +19,9 @@ _G.Melee = {
 
 -- Sword / ดาบ
 _G.Sword = { 
-    ['Saber'] = false,
+    ['Saber'] = true,
     ['Midnight Blade'] = false,
-    ['Shisui'] = false,
+    ['Shisui'] = true,
     ['Saddi'] = false,
     ['Wando'] = false,
     ['Yama'] = true,
@@ -36,15 +36,15 @@ _G.Sword = {
     ['Tushita'] = true,
     ['True Triple Katana'] = false,
     ['Cursed Dual Katana'] = true,
-    ['Shark Anchor'] = true
+    ['Shark Anchor'] = false
 }
 
 -- Farm Gun / ฟามปืน
 _G.Gun = {  
-    ['Kabucha'] = false,
+    ['Kabucha'] = true,
     ['Acidum Rifle'] = true,
     ['Soul Guitar'] = true, 
-    ['Serpent Bow'] = false
+    ['Serpent Bow'] = true
 }
 
 -- Devil Fruit / ผลปีศาจ
@@ -65,6 +65,3 @@ _G.Setting = {
     ['FPS Booster'] = true,
     ['Auto Close Ui'] = true 
 }
-
-script_key="uQgahpxUOQRhOVufJnkUDpbRPQUdCSIB";
-loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/58876769bc015b00b9a3008484e99085.lua"))()
