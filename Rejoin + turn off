@@ -34,11 +34,6 @@ gs.ErrorMessageChanged:connect(
 		end
 	end)
 
-UserSettings():GetService('UserGameSettings').MasterVolume = 0;
-settings().Rendering.QualityLevel = 1;
-game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat,false)
-game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList,false)
-game:GetService("Lighting").GlobalShadows = false
 spawn(function()
 while true do wait(300)
 Messages = "buy nick at fakervn ⊙ com"
