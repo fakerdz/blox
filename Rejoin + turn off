@@ -45,5 +45,3 @@ RunService.Heartbeat:Connect(function()
         hopToLowPlayerServer()
     end
 end)
-
-thêm cái delay vô dùm kiểu trong vòng 120s mà vẫn ở đó thì hop còn k còn thì thôi
