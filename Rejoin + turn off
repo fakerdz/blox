@@ -3,8 +3,7 @@ local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
 local checkRadius = 50 -- Khoảng cách kiểm tra người chơi gần (nếu cần)
-local extraWaitTime = 10 -- Thêm thời gian chờ nếu có người chơi gần
-local checkDelay = 60 -- Delay giữa mỗi lần kiểm tra (180 giây)
+local checkDelay = 180 -- Delay giữa mỗi lần kiểm tra (180 giây)
 
 -- Hàm kiểm tra có người chơi gần không
 local function isNearPlayer()
@@ -43,11 +42,18 @@ local function hopToLowPlayerServer()
     end
 end
 
+-- Hàm tạo thời gian chờ ngẫu nhiên từ 60 đến 120 giây
+local function getRandomWaitTime()
+    return math.random(60, 120)  -- Thời gian ngẫu nhiên giữa 60 và 120 giây
+end
+
 -- Kiểm tra và hop server nếu có người chơi gần
 local function checkAndHop()
     while true do
         if isNearPlayer() then
-            wait(extraWaitTime)  -- Nếu có người chơi gần, đợi thêm 60 giây
+            local extraWaitTime = getRandomWaitTime()  -- Lấy thời gian ngẫu nhiên khi có người chơi gần
+            print("Có người chơi gần, sẽ hop sau " .. extraWaitTime .. " giây.")
+            wait(extraWaitTime)  -- Nếu có người chơi gần, đợi thêm thời gian ngẫu nhiên
             hopToLowPlayerServer()  -- Hop server
         else
             print("Không có người chơi gần, không hop server.")
