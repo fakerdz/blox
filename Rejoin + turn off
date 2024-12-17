@@ -4,12 +4,9 @@ local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 
-local checkRadius = 50 -- Khoảng cách kiểm tra người chơi gần
-local delayBeforeHop = 120 -- Thời gian chờ trước khi hop server (tính bằng giây)
+local checkRadius = 50 -- Distance to check for nearby players
 
-local startTime = nil -- Biến để lưu thời gian bắt đầu phát hiện người chơi gần
-
--- Hàm kiểm tra có người chơi gần không
+-- Function to check for nearby players
 local function isNearPlayer()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -27,7 +24,7 @@ local function isNearPlayer()
     return false
 end
 
--- Hàm hop sang server ít người
+-- Function to hop to a low-population server
 local function hopToLowPlayerServer()
     local success, result = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
@@ -42,16 +39,11 @@ local function hopToLowPlayerServer()
     end)
 end
 
--- Vòng lặp kiểm tra liên tục
+-- Continuous check for nearby players
 RunService.Heartbeat:Connect(function()
     if isNearPlayer() then
-        if not startTime then
-            startTime = os.time() -- Ghi lại thời gian bắt đầu khi có người chơi gần
-        elseif os.time() - startTime >= delayBeforeHop then
-            -- Nếu đã đủ thời gian delay thì hop server
-            hopToLowPlayerServer()
-        end
-    else
-        startTime = nil -- Reset thời gian nếu không còn người chơi gần
+        hopToLowPlayerServer()
     end
 end)
+
+thêm cái delay vô dùm kiểu trong vòng 120s mà vẫn ở đó thì hop còn k còn thì thôi
