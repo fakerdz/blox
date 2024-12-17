@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
-local checkRadius = 200 -- Khoảng cách kiểm tra người chơi gần (nếu cần)
+local checkRadius = 50 -- Khoảng cách kiểm tra người chơi gần (nếu cần)
 local extraWaitTime = 10 -- Thêm thời gian chờ nếu có người chơi gần
 local checkDelay = 60 -- Delay giữa mỗi lần kiểm tra (180 giây)
 
