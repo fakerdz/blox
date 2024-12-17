@@ -4,7 +4,7 @@ local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 
-local checkRadius = 50 -- Distance to check for nearby players
+local checkRadius = 10 -- Distance to check for nearby players
 
 -- Function to check for nearby players
 local function isNearPlayer()
