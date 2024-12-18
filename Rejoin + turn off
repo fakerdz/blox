@@ -1,9 +1,12 @@
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
+
 local LocalPlayer = Players.LocalPlayer
-local checkRadius = 50 -- Khoảng cách kiểm tra người chơi gần (50)
-local checkDelay = 180 -- Delay giữa mỗi lần kiểm tra level (180 giây)
+local checkRadius = 50 -- Khoảng cách kiểm tra người chơi gần
+local positionCheckDelay = 180 -- Thời gian kiểm tra vị trí đứng yên (180 giây)
+local checkDelay = 10 -- Thời gian giữa mỗi lần kiểm tra (10 giây)
 
 -- Hàm kiểm tra có người chơi gần không
 local function isNearPlayer()
@@ -21,15 +24,6 @@ local function isNearPlayer()
         end
     end
     return false
-end
-
--- Hàm lấy level của người chơi
-local function getPlayerLevel()
-    local stats = LocalPlayer:FindFirstChild("leaderstats")
-    if stats and stats:FindFirstChild("Level") then
-        return stats.Level.Value
-    end
-    return nil
 end
 
 -- Hàm hop sang server ít người
@@ -56,30 +50,35 @@ local function getRandomWaitTime()
     return math.random(60, 120)  -- Thời gian ngẫu nhiên giữa 60 và 120 giây
 end
 
--- Kiểm tra stuck level và hop server nếu có người chơi gần
-local function checkAndHop()
-    local previousLevel = getPlayerLevel()
+-- Kiểm tra người chơi đứng yên tại một vị trí
+local lastPosition = nil
+local timeStuck = 0
 
-    while true do
-        wait(checkDelay) -- Chờ delay giữa mỗi lần kiểm tra (180 giây)
-        
-        -- Kiểm tra stuck level
-        local currentLevel = getPlayerLevel()
-        if currentLevel and previousLevel then
-            if currentLevel <= previousLevel then
-                print("Level không tăng, rejoin server...")
+local function checkStuck()
+    local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
+
+    if myPosition then
+        if lastPosition and (myPosition - lastPosition).Magnitude < 1 then
+            -- Nếu vị trí không thay đổi, tăng thời gian đứng yên
+            timeStuck = timeStuck + checkDelay
+            print("Đang đứng yên trong: " .. timeStuck .. " giây")
+            if timeStuck >= positionCheckDelay then
+                print("Đứng yên quá lâu, hop server...")
                 hopToLowPlayerServer()
-                break
-            else
-                print("Level đã tăng, cập nhật level mới.")
-                previousLevel = currentLevel
             end
         else
-            print("Không thể lấy level, rejoin server...")
-            hopToLowPlayerServer()
-            break
+            -- Nếu vị trí thay đổi, reset thời gian đứng yên
+            timeStuck = 0
         end
+        lastPosition = myPosition
+    end
+end
 
+-- Kiểm tra và hop server nếu có người chơi gần
+local function checkAndHop()
+    while true do
+        wait(checkDelay) -- Delay giữa mỗi lần kiểm tra
+        
         -- Kiểm tra có người chơi gần
         if isNearPlayer() then
             local extraWaitTime = getRandomWaitTime()  -- Thời gian ngẫu nhiên
@@ -90,6 +89,9 @@ local function checkAndHop()
         else
             print("Không có người chơi gần, tiếp tục kiểm tra.")
         end
+
+        -- Kiểm tra stuck
+        checkStuck()
     end
 end
 
