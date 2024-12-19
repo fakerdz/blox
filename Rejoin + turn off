@@ -55,7 +55,9 @@ local function checkStuck()
     if myPosition then
         if lastPosition and (myPosition - lastPosition).Magnitude < 1 then
             timeStuck = timeStuck + checkDelay
+            print("Đứng yên trong: " .. timeStuck .. " giây")
             if timeStuck >= positionCheckDelay then
+                print("Đứng yên quá lâu, đổi server...")
                 hopToServer()
             end
         else
@@ -74,11 +76,13 @@ while true do
             currentLevel = newLevel
             lastUpdateTime = os.time()
         elseif os.time() - lastUpdateTime >= maxIdleTime then
+            print("Không tăng level trong " .. maxIdleTime .. " giây, đổi server...")
             hopToServer()
         end
     end
 
     if isNearPlayer() then
+        print("Có người chơi gần, chuẩn bị đổi server...")
         task.wait(math.random(60, 120))
         hopToServer()
         break
