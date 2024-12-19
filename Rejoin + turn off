@@ -1,99 +1,89 @@
+repeat task.wait() until game:IsLoaded()
+
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
-local checkRadius = 50 -- Khoảng cách kiểm tra người chơi gần
-local positionCheckDelay = 180 -- Thời gian kiểm tra vị trí đứng yên (180 giây)
-local checkDelay = 10 -- Thời gian giữa mỗi lần kiểm tra (10 giây)
+local checkRadius = 50
+local positionCheckDelay = 180
+local checkDelay = 10
+local maxIdleTime = 300 -- Thời gian tối đa kiểm tra level là 300 giây
+local currentLevel = nil
+local lastUpdateTime = os.time()
+local lastPosition = nil
+local timeStuck = 0
 
--- Hàm kiểm tra có người chơi gần không
+local function getLevel()
+    if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Level") then
+        return LocalPlayer.Data.Level.Value
+    end
+    return nil
+end
+
 local function isNearPlayer()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local playerPosition = player.Character.HumanoidRootPart.Position
             local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
-            
-            if myPosition then
-                local distance = (playerPosition - myPosition).Magnitude
-                if distance <= checkRadius then
-                    return true
-                end
+            if myPosition and (playerPosition - myPosition).Magnitude <= checkRadius then
+                return true
             end
         end
     end
     return false
 end
 
--- Hàm hop sang server ít người
-local function hopToLowPlayerServer()
+local function hopToServer()
     local success, result = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
-
         for _, server in ipairs(response.data) do
-            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+            if server.id ~= game.JobId and server.playing < server.maxPlayers then
                 TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
                 return
             end
         end
     end)
-
     if not success then
-        warn("Error hopping to server: " .. tostring(result))
+        TeleportService:Teleport(game.PlaceId)
     end
 end
 
--- Hàm tạo thời gian chờ ngẫu nhiên từ 60 đến 120 giây
-local function getRandomWaitTime()
-    return math.random(60, 120)  -- Thời gian ngẫu nhiên giữa 60 và 120 giây
-end
-
--- Kiểm tra người chơi đứng yên tại một vị trí
-local lastPosition = nil
-local timeStuck = 0
-
 local function checkStuck()
     local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
-
     if myPosition then
         if lastPosition and (myPosition - lastPosition).Magnitude < 1 then
-            -- Nếu vị trí không thay đổi, tăng thời gian đứng yên
             timeStuck = timeStuck + checkDelay
-            print("Đang đứng yên trong: " .. timeStuck .. " giây")
             if timeStuck >= positionCheckDelay then
-                print("Đứng yên quá lâu, hop server...")
-                hopToLowPlayerServer()
+                hopToServer()
             end
         else
-            -- Nếu vị trí thay đổi, reset thời gian đứng yên
             timeStuck = 0
         end
         lastPosition = myPosition
     end
 end
 
--- Kiểm tra và hop server nếu có người chơi gần
-local function checkAndHop()
-    while true do
-        wait(checkDelay) -- Delay giữa mỗi lần kiểm tra
-        
-        -- Kiểm tra có người chơi gần
-        if isNearPlayer() then
-            local extraWaitTime = getRandomWaitTime()  -- Thời gian ngẫu nhiên
-            print("Có người chơi gần, sẽ hop server sau " .. extraWaitTime .. " giây.")
-            wait(extraWaitTime)
-            hopToLowPlayerServer()
-            break
-        else
-            print("Không có người chơi gần, tiếp tục kiểm tra.")
+while true do
+    local newLevel = getLevel()
+    if newLevel then
+        if currentLevel == nil then
+            currentLevel = newLevel
+        elseif newLevel > currentLevel then
+            currentLevel = newLevel
+            lastUpdateTime = os.time()
+        elseif os.time() - lastUpdateTime >= maxIdleTime then
+            hopToServer()
         end
-
-        -- Kiểm tra stuck
-        checkStuck()
     end
-end
 
--- Chạy hàm kiểm tra và hop server
-checkAndHop()
+    if isNearPlayer() then
+        task.wait(math.random(60, 120))
+        hopToServer()
+        break
+    end
+
+    checkStuck()
+    task.wait(checkDelay)
+end
