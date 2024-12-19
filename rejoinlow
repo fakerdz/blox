@@ -1,13 +1,23 @@
+repeat task.wait() until game:IsLoaded()
+
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
-local checkRadius = 50 -- Khoảng cách kiểm tra người chơi gần
-local delayBeforeHop = 120 -- Thời gian chờ trước khi hop server (tính bằng giây)
+local LocalPlayer = Players.LocalPlayer
+local checkRadius = 50
+local checkDelay = 10
+local maxIdleTime = 400 -- Thời gian tối đa kiểm tra level là 300 giây
+local currentLevel = nil
+local lastUpdateTime = os.time()
 
-local startTime = nil -- Biến để lưu thời gian bắt đầu phát hiện người chơi gần
+-- Hàm lấy Level của người chơi
+local function getLevel()
+    if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Level") then
+        return LocalPlayer.Data.Level.Value
+    end
+    return nil
+end
 
 -- Hàm kiểm tra có người chơi gần không
 local function isNearPlayer()
@@ -15,12 +25,9 @@ local function isNearPlayer()
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local playerPosition = player.Character.HumanoidRootPart.Position
             local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
-            
-            if myPosition then
-                local distance = (playerPosition - myPosition).Magnitude
-                if distance <= checkRadius then
-                    return true
-                end
+            if myPosition and (playerPosition - myPosition).Magnitude <= checkRadius then
+                print("Phát hiện người chơi gần!")
+                return true
             end
         end
     end
@@ -28,30 +35,46 @@ local function isNearPlayer()
 end
 
 -- Hàm hop sang server ít người
-local function hopToLowPlayerServer()
+local function hopToServer()
     local success, result = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
-
         for _, server in ipairs(response.data) do
-            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+            if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                print("Đang hop sang server khác...")
                 TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
                 return
             end
         end
     end)
+    if not success then
+        print("Lỗi khi hop server: " .. tostring(result))
+        TeleportService:Teleport(game.PlaceId)
+    end
 end
 
--- Vòng lặp kiểm tra liên tục
-RunService.Heartbeat:Connect(function()
-    if isNearPlayer() then
-        if not startTime then
-            startTime = os.time() -- Ghi lại thời gian bắt đầu khi có người chơi gần
-        elseif os.time() - startTime >= delayBeforeHop then
-            -- Nếu đã đủ thời gian delay thì hop server
-            hopToLowPlayerServer()
+-- Vòng lặp kiểm tra và thực thi
+while true do
+    local newLevel = getLevel()
+    if newLevel then
+        if currentLevel == nil then
+            currentLevel = newLevel
+        elseif newLevel > currentLevel then
+            currentLevel = newLevel
+            lastUpdateTime = os.time()
+        elseif os.time() - lastUpdateTime >= maxIdleTime then
+            print("Không tăng cấp trong thời gian dài, đang hop server...")
+            hopToServer()
         end
-    else
-        startTime = nil -- Reset thời gian nếu không còn người chơi gần
     end
-end)
+
+    if isNearPlayer() then
+        local waitTime = math.random(60, 120)
+        print("Có người chơi gần, sẽ hop server sau " .. waitTime .. " giây.")
+        task.wait(waitTime)
+        hopToServer()
+        break
+    end
+
+    task.wait(checkDelay)
+end
