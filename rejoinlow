@@ -1,14 +1,15 @@
--- Dịch vụ và biến cần thiết
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 
--- Khoảng cách để kiểm tra người chơi gần
-local checkRadius = 50 -- Khoảng cách (studs)
+local checkRadius = 50 -- Khoảng cách kiểm tra người chơi gần
+local delayBeforeHop = 120 -- Thời gian chờ trước khi hop server (tính bằng giây)
 
--- Hàm kiểm tra người chơi gần
+local startTime = nil -- Biến để lưu thời gian bắt đầu phát hiện người chơi gần
+
+-- Hàm kiểm tra có người chơi gần không
 local function isNearPlayer()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -18,7 +19,7 @@ local function isNearPlayer()
             if myPosition then
                 local distance = (playerPosition - myPosition).Magnitude
                 if distance <= checkRadius then
-                    return true -- Có người chơi gần
+                    return true
                 end
             end
         end
@@ -26,31 +27,31 @@ local function isNearPlayer()
     return false
 end
 
--- Hàm lấy server ít người từ API
+-- Hàm hop sang server ít người
 local function hopToLowPlayerServer()
     local success, result = pcall(function()
-        -- Lấy thông tin server từ API của Roblox
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
 
         for _, server in ipairs(response.data) do
             if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                print("Đang chuyển sang server khác...")
                 TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
                 return
             end
         end
     end)
-
-    if not success then
-        warn("Không thể tìm server khác:", result)
-    end
 end
 
--- Chạy kiểm tra liên tục
+-- Vòng lặp kiểm tra liên tục
 RunService.Heartbeat:Connect(function()
     if isNearPlayer() then
-        print("Phát hiện người chơi gần, chuyển server...")
-        hopToLowPlayerServer()
+        if not startTime then
+            startTime = os.time() -- Ghi lại thời gian bắt đầu khi có người chơi gần
+        elseif os.time() - startTime >= delayBeforeHop then
+            -- Nếu đã đủ thời gian delay thì hop server
+            hopToLowPlayerServer()
+        end
+    else
+        startTime = nil -- Reset thời gian nếu không còn người chơi gần
     end
 end)
