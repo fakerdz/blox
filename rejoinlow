@@ -6,8 +6,8 @@ local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local checkRadius = 50
-local checkDelay = 10
-local maxIdleTime = 400 -- Thời gian tối đa kiểm tra level là 300 giây
+local checkDelay = 120
+local maxIdleTime = 1200 -- Thời gian tối đa kiểm tra level là 300 giây
 local currentLevel = nil
 local lastUpdateTime = os.time()
 
