@@ -69,9 +69,27 @@ local function checkStuck()
     end
 end
 
+local function checkFightingStyleByTool()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+
+    -- Kiểm tra nếu nhân vật có Tool
+    if character and character:FindFirstChildOfClass("Tool") then
+        local tool = character:FindFirstChildOfClass("Tool")
+        -- In ra tên công cụ (vũ khí) đang được sử dụng
+        print("Đang sử dụng công cụ: " .. tool.Name)
+
+        -- Kiểm tra nếu công cụ là "God Human"
+        if tool.Name == "God Human" then
+            return true
+        end
+    end
+    return false
+end
+
 while true do
     local newLevel = getLevel()
-    
+
     -- Kiểm tra liên tục
     if newLevel then
         if currentLevel == nil then
@@ -83,9 +101,9 @@ while true do
             hopToServer()
         end
 
-        -- Auto kick khi đạt level 2600
-        if newLevel >= 2600 then
-            print("Level đạt 2600, thoát game trong 120 giây...")
+        -- Kiểm tra điều kiện level 2600 và God Human
+        if newLevel >= 2600 and checkFightingStyleByTool() then
+            print("Level đạt 2600 và sử dụng God Human, thoát game trong 120 giây...")
             local countdown = 120
             while countdown > 0 do
                 print("Thoát game sau " .. countdown .. " giây...")
@@ -141,8 +159,7 @@ GuiService.ErrorMessageChanged:Connect(function()
         not reconnectDisabledList[error_code] then
         print('Disconnect registered!')
         while task.wait(5) do
-            TeleportService:TeleportToPlaceInstance(
-                game.PlaceId, game.JobId)
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId)
         end
     end
 end)
