@@ -3,16 +3,20 @@ repeat task.wait() until game:IsLoaded()
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
+local GuiService = game:GetService("GuiService")
 
 local LocalPlayer = Players.LocalPlayer
 local checkRadius = 100
 local positionCheckDelay = 180
 local checkDelay = 10
-local maxIdleTime = 600 -- Thời gian tối đa kiểm tra level là 300 giây
+local maxIdleTime = 600 -- Thời gian tối đa kiểm tra level là 600 giây
 local currentLevel = nil
 local lastUpdateTime = os.time()
 local lastPosition = nil
 local timeStuck = 0
+
+-- Biến đánh dấu thoát game tự nguyện
+local voluntaryKick = false
 
 local function getLevel()
     if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Level") then
@@ -76,6 +80,14 @@ while true do
         elseif os.time() - lastUpdateTime >= maxIdleTime then
             hopToServer()
         end
+
+        -- Auto kick khi đạt level 2600
+        if newLevel >= 2600 then
+            print("Level đạt 2600, thoát game...")
+            voluntaryKick = true -- Đánh dấu rằng thoát game là tự nguyện
+            game:Shutdown() -- Ngắt kết nối
+            break
+        end
     end
 
     if isNearPlayer() then
@@ -88,38 +100,41 @@ while true do
     task.wait(checkDelay)
 end
 
-local gs = game:GetService 'GuiService'
 local reconnectDisabledList = {
-	[Enum.ConnectionError.DisconnectLuaKick] = true,
-	[Enum.ConnectionError.DisconnectSecurityKeyMismatch] = true,
-	[Enum.ConnectionError.DisconnectNewSecurityKeyMismatch] = true,
-	[Enum.ConnectionError.DisconnectDuplicateTicket] = true,
-	[Enum.ConnectionError.DisconnectWrongVersion] = true,
-	[Enum.ConnectionError.DisconnectProtocolMismatch] = true,
-	[Enum.ConnectionError.DisconnectBadhash] = true,
-	[Enum.ConnectionError.DisconnectIllegalTeleport] = true,
-	[Enum.ConnectionError.DisconnectDuplicatePlayer] = true,
-	[Enum.ConnectionError.DisconnectCloudEditKick] = true,
-	[Enum.ConnectionError.DisconnectOnRemoteSysStats] = true,
-	[Enum.ConnectionError.DisconnectRaknetErrors] = true,
-	[Enum.ConnectionError.PlacelaunchFlooded] = true,
-	[Enum.ConnectionError.PlacelaunchHashException] = true,
-	[Enum.ConnectionError.PlacelaunchHashExpired] = true,
-	[Enum.ConnectionError.PlacelaunchUnauthorized] = true,
-	[Enum.ConnectionError.PlacelaunchUserLeft] = true,
-	[Enum.ConnectionError.PlacelaunchRestricted] = true,
+    [Enum.ConnectionError.DisconnectLuaKick] = true,
+    [Enum.ConnectionError.DisconnectSecurityKeyMismatch] = true,
+    [Enum.ConnectionError.DisconnectNewSecurityKeyMismatch] = true,
+    [Enum.ConnectionError.DisconnectDuplicateTicket] = true,
+    [Enum.ConnectionError.DisconnectWrongVersion] = true,
+    [Enum.ConnectionError.DisconnectProtocolMismatch] = true,
+    [Enum.ConnectionError.DisconnectBadhash] = true,
+    [Enum.ConnectionError.DisconnectIllegalTeleport] = true,
+    [Enum.ConnectionError.DisconnectDuplicatePlayer] = true,
+    [Enum.ConnectionError.DisconnectCloudEditKick] = true,
+    [Enum.ConnectionError.DisconnectOnRemoteSysStats] = true,
+    [Enum.ConnectionError.DisconnectRaknetErrors] = true,
+    [Enum.ConnectionError.PlacelaunchFlooded] = true,
+    [Enum.ConnectionError.PlacelaunchHashException] = true,
+    [Enum.ConnectionError.PlacelaunchHashExpired] = true,
+    [Enum.ConnectionError.PlacelaunchUnauthorized] = true,
+    [Enum.ConnectionError.PlacelaunchUserLeft] = true,
+    [Enum.ConnectionError.PlacelaunchRestricted] = true,
 }
 
-gs.ErrorMessageChanged:connect(
-	function()
-		local error_code = gs:GetErrorCode()
-		local error_type = gs:GetErrorType()
-		if error_type == Enum.ConnectionError.DisconnectErrors and
-			not reconnectDisabledList[error_code] then
-			print('Disconnect registered!')
-			while task.wait(5) do
-				game:GetService 'TeleportService':TeleportToPlaceInstance(
-					game.PlaceId, game.JobId)
-			end
-		end
-	end)
+GuiService.ErrorMessageChanged:Connect(function()
+    local error_code = GuiService:GetErrorCode()
+    local error_type = GuiService:GetErrorType()
+    if voluntaryKick then
+        -- Không rejoin nếu thoát tự nguyện
+        print("Người chơi thoát tự nguyện, không thực hiện reconnect.")
+        return
+    end
+    if error_type == Enum.ConnectionError.DisconnectErrors and
+        not reconnectDisabledList[error_code] then
+        print('Disconnect registered!')
+        while task.wait(5) do
+            TeleportService:TeleportToPlaceInstance(
+                game.PlaceId, game.JobId)
+        end
+    end
+end)
