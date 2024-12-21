@@ -71,6 +71,8 @@ end
 
 while true do
     local newLevel = getLevel()
+    
+    -- Kiểm tra liên tục
     if newLevel then
         if currentLevel == nil then
             currentLevel = newLevel
@@ -103,7 +105,7 @@ while true do
     end
 
     checkStuck()
-    task.wait(checkDelay)
+    task.wait(checkDelay) -- Đảm bảo rằng vòng lặp chạy liên tục
 end
 
 local reconnectDisabledList = {
