@@ -83,7 +83,13 @@ while true do
 
         -- Auto kick khi đạt level 2600
         if newLevel >= 2600 then
-            print("Level đạt 2600, thoát game...")
+            print("Level đạt 2600, thoát game trong 120 giây...")
+            local countdown = 120
+            while countdown > 0 do
+                print("Thoát game sau " .. countdown .. " giây...")
+                task.wait(1)
+                countdown = countdown - 1
+            end
             voluntaryKick = true -- Đánh dấu rằng thoát game là tự nguyện
             game:Shutdown() -- Ngắt kết nối
             break
