@@ -8,7 +8,7 @@ local LocalPlayer = Players.LocalPlayer
 local checkRadius = 100
 local positionCheckDelay = 180
 local checkDelay = 10
-local maxIdleTime = 600 -- Thời gian tối đa kiểm tra level là 600 giây
+local maxIdleTime = 600 -- Thời gian tối đa kiểm tra level là 300 giây
 local currentLevel = nil
 local lastUpdateTime = os.time()
 local lastPosition = nil
@@ -38,26 +38,13 @@ local function hopToServer()
     local success, result = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
-        local bestServer = nil
-        local minPlayers = math.huge
-
         for _, server in ipairs(response.data) do
             if server.id ~= game.JobId and server.playing < server.maxPlayers then
-                -- Ưu tiên server ít người chơi
-                if server.playing < minPlayers and server.playing > 0 then
-                    bestServer = server
-                    minPlayers = server.playing
-                end
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
+                return
             end
         end
-
-        if bestServer then
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer.id, LocalPlayer)
-        else
-            TeleportService:Teleport(game.PlaceId)
-        end
     end)
-
     if not success then
         TeleportService:Teleport(game.PlaceId)
     end
@@ -100,3 +87,5 @@ while true do
     checkStuck()
     task.wait(checkDelay)
 end
+
+sửa này dc k chứ tui thấy hop sever ít người kiểu bị nhiều clone tui hop cùng sever
