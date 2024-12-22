@@ -15,7 +15,7 @@ local currentLevel = nil
 local lastUpdateTime = os.time()
 local lastPosition = nil
 local timeStuck = 0
-local fpsCheckInterval = 300 -- Kiểm tra FPS mỗi 5 phút
+local fpsCheckInterval = 120 -- Kiểm tra FPS mỗi 5 phút
 local rejoinThreshold = 5 -- Ngưỡng FPS thấp hơn sẽ tự động rejoin
 local voluntaryKick = false
 
