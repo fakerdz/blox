@@ -73,19 +73,27 @@ local function checkFightingStyleByTool()
     local player = game.Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
 
-    -- Kiểm tra nếu nhân vật có Tool
+    print("Hàm checkFightingStyleByTool được gọi.")
+
     if character and character:FindFirstChildOfClass("Tool") then
         local tool = character:FindFirstChildOfClass("Tool")
-        -- In ra tên công cụ (vũ khí) đang được sử dụng
-        print("Đang sử dụng công cụ: " .. tool.Name)
-
-        -- Kiểm tra nếu công cụ là "God Human"
+        print("Tool phát hiện: " .. tool.Name)
         if tool.Name == "God Human" then
+            print("Tool là God Human!")
             return true
+        else
+            print("Tool không phải God Human.")
         end
+    else
+        print("Không tìm thấy Tool nào.")
     end
     return false
 end
+
+print("Gọi hàm kiểm tra Fighting Style...")
+local result = checkFightingStyleByTool()
+print("Kết quả kiểm tra: " .. tostring(result))
+
 
 while true do
     local newLevel = getLevel()
