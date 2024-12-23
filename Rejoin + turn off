@@ -153,6 +153,7 @@ local reconnectDisabledList = {
     [Enum.ConnectionError.PlacelaunchUnauthorized] = true,
     [Enum.ConnectionError.PlacelaunchUserLeft] = true,
     [Enum.ConnectionError.PlacelaunchRestricted] = true,
+    [267] = true,  -- Security kick error code
 }
 
 GuiService.ErrorMessageChanged:Connect(function()
