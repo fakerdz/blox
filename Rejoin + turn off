@@ -75,21 +75,44 @@ local function checkFightingStyleByTool()
 
     print("Hàm checkFightingStyleByTool được gọi.")
 
-    if character and character:FindFirstChildOfClass("Tool") then
-        local tool = character:FindFirstChildOfClass("Tool")
-        print("Tool phát hiện: " .. tool.Name)
-        if tool.Name == "God Human" then
-            print("Tool là God Human!")
-            return true
-        else
-            print("Tool không phải God Human.")
+    -- Print the contents of Character and Backpack
+    if character then
+        print("Danh sách Tool trong Character:")
+        for _, tool in pairs(character:GetChildren()) do
+            if tool:IsA("Tool") then
+                print("Tool trong Character: " .. tool.Name)
+            end
         end
-    else
-        print("Không tìm thấy Tool nào.")
     end
+
+    -- Print the contents of Backpack
+    if player.Backpack then
+        print("Danh sách Tool trong Backpack:")
+        for _, tool in pairs(player.Backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                print("Tool trong Backpack: " .. tool.Name)
+            end
+        end
+    end
+
+    -- Check if the tool is Godhuman in either the character or backpack
+    local tool = nil
+    if character then
+        tool = character:FindFirstChild("Godhuman")
+    end
+    if not tool then
+        tool = player.Backpack:FindFirstChild("Godhuman")
+    end
+
+    if tool then
+        print("Tool là God Human!")
+        return true
+    else
+        print("Tool không phải God Human.")
+    end
+
     return false
 end
-
 print("Gọi hàm kiểm tra Fighting Style...")
 local result = checkFightingStyleByTool()
 print("Kết quả kiểm tra: " .. tostring(result))
