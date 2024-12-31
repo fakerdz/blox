@@ -1,4 +1,3 @@
-
 script_key = "S2T2BDFFSGTZNOUP433O77X27TQPN4PN6TF35KNXXI"
 getgenv().Configs = {
     ["Team"] = "Pirates",
