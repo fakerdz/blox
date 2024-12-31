@@ -15,5 +15,4 @@ getgenv().Configs = {
     ["Find Fruit"] = true, -- Will find 1m+ fruit to UNLOCK SWAN DOOR TO ACCESS THIRD SEA
     ["Cursed Dual Katana"] = true --Farm CDK First
 }
-loadstring(game:HttpGet("https://raw.githubusercontent.com/fakerdz/blox/refs/heads/main/Rejoin%20%2B%20turn%20off"))()
 repeat task.wait(6) pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/verudous/Xero-Hub/refs/heads/main/kaitun.lua"))()end) until getgenv().Check_Execute
