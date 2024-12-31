@@ -1,4 +1,4 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/fakerdz/blox/refs/heads/main/Rejoin%20%2B%20turn%20off"))
+
 script_key = "S2T2BDFFSGTZNOUP433O77X27TQPN4PN6TF35KNXXI"
 getgenv().Configs = {
     ["Team"] = "Pirates",
