@@ -4,7 +4,7 @@ getgenv().Configs = {
     ["Gun Farm"] = true, -- Fast farm level, BUT FARMING MELEE VERY SLOW GODHUMAN
     ["FPS Boost"] = {
         ["Enable"] = false, -- don't enable let me fix
-        ["FPS Cap"] = 15, --FPS  recommend 20
+        ["FPS Cap"] = 15 --FPS  recommend 20
     },
     ["Farm Boss Drops"] = {
         ["Enable"] = false,
