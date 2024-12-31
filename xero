@@ -1,3 +1,11 @@
+repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
+spawn(function()
+    while true do 
+        wait(300)
+        local Messages = "buy nick at fakervn ⊙ com"
+        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Messages, "All")
+    end
+end)
 script_key = "S2T2BDFFSGTZNOUP433O77X27TQPN4PN6TF35KNXXI"
 getgenv().Configs = {
     ["Team"] = "Pirates",
