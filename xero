@@ -22,4 +22,5 @@ getgenv().Configs = {
     ["Lock Fragment"] = 0,
     ["Buy Stuffs"] = true -- buso, geppo, soru, ken haki
 }
+loadstring(game:HttpGet("https://raw.githubusercontent.com/fakerdz/blox/refs/heads/main/REJOIN"))()
 repeat task.wait() pcall(function() loadstring(game:HttpGet("https://reviewphim.fun/Xero%20Hub/Blox%20Fruit/kaitun.lua"))() end) until getgenv().Check_Execute
