@@ -13,7 +13,7 @@ getgenv().Configs = {
         ["When x2 Exp Expired"] = false
     },
     ["Rainbow Haki"] = false,
-    ["Hop Player Near"] = false,
+    ["Hop Player Near"] = true,
     ["Skull Guitar"] = false,
     ["Find Fruit"] = false, -- Will find 1m+ fruit to unlock swan door to access third sea
     ["Cursed Dual Katana"] = true,
