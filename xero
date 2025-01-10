@@ -1,6 +1,6 @@
 -- Max level, godhuman, cdk, sgt
 script_key = "S2T2BDFFSGTZNOUP433O77X27TQPN4PN6TF35KNXXI"
-getgenv().Shutdown = true -- Turn on if u are farming bulk accounts
+getgenv().Shutdown = false -- Turn on if u are farming bulk accounts
 getgenv().Configs = {
     ["Team"] = "Marines",
     ["Gun Farm"] = false, -- Disabled
