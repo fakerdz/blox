@@ -5,12 +5,12 @@ local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
-local checkRadius = 500
 local positionCheckDelay = 180
 local checkDelay = 10
 local lastPosition = nil
 local timeStuck = 0
 
+-- Hàm hop server
 local function hopToServer()
     local success = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
@@ -34,17 +34,18 @@ local function hopToServer()
     end
 end
 
-local function isNearPlayer()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local playerPosition = player.Character.HumanoidRootPart.Position
-            local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
-            if myPosition and (playerPosition - myPosition).Magnitude <= checkRadius then
-                return true
+-- Bắt sự kiện chạm với người chơi khác
+local function detectTouch()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local humanoidRootPart = LocalPlayer.Character.HumanoidRootPart
+
+        humanoidRootPart.Touched:Connect(function(hit)
+            local touchedPlayer = Players:GetPlayerFromCharacter(hit.Parent)
+            if touchedPlayer and touchedPlayer ~= LocalPlayer then
+                hopToServer() -- Hop server khi có người chơi chạm vào mình
             end
-        end
+        end)
     end
-    return false
 end
 
 -- Kiểm tra kẹt vị trí
@@ -63,19 +64,17 @@ local function checkStuck()
     end
 end
 
+-- Khởi chạy bắt sự kiện chạm
+spawn(detectTouch)
+
 -- Vòng lặp chính
 while true do
-    -- Nếu phát hiện người chơi gần, ngay lập tức hop server
-    if isNearPlayer() then
-        hopToServer()
-        break
-    end
-
     -- Kiểm tra kẹt vị trí
     checkStuck()
     task.wait(checkDelay)
 end
 
+-- Gửi thông điệp mỗi 5 phút
 spawn(function()
     while true do 
         task.wait(300)
