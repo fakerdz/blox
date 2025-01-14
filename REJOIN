@@ -6,9 +6,11 @@ local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local positionCheckDelay = 180
-local checkDelay = 10
+local checkDelay = 10  -- Khoảng thời gian kiểm tra kẹt vị trí
+local touchDelay = math.random(10, 20)  -- Thời gian ngẫu nhiên từ 10 đến 20 giây để kiểm tra sự kiện chạm
 local lastPosition = nil
 local timeStuck = 0
+local touchTime = 0  -- Thời gian đã trôi qua từ khi sự kiện chạm xảy ra
 
 -- Hàm hop server ngẫu nhiên có ít người chơi
 local function hopToServer()
@@ -52,7 +54,7 @@ local function detectTouch()
                 -- Đảm bảo chỉ hop server khi chạm vào một người chơi khác
                 if touchedPlayer.Character and touchedPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     print("Touched player: " .. touchedPlayer.Name) -- Debug
-                    hopToServer() -- Hop server nếu chạm vào người chơi khác
+                    touchTime = tick()  -- Đặt thời gian bắt đầu sự kiện chạm
                 end
             end
         end)
@@ -75,6 +77,14 @@ local function checkStuck()
     end
 end
 
+-- Kiểm tra nếu sự kiện chạm xảy ra trong vòng 10-20 giây
+local function checkTouchTimeout()
+    if touchTime > 0 and tick() - touchTime >= touchDelay then
+        hopToServer()  -- Nếu quá 10-20 giây, hop server
+        touchTime = 0  -- Reset thời gian chạm
+    end
+end
+
 -- Khởi chạy bắt sự kiện chạm
 spawn(detectTouch)
 
@@ -82,6 +92,10 @@ spawn(detectTouch)
 while true do
     -- Kiểm tra kẹt vị trí
     checkStuck()
+    
+    -- Kiểm tra nếu có sự kiện chạm xảy ra trong khoảng thời gian 10-20 giây
+    checkTouchTimeout()
+
     task.wait(checkDelay)
 end
 
