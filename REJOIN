@@ -49,7 +49,11 @@ local function detectTouch()
         humanoidRootPart.Touched:Connect(function(hit)
             local touchedPlayer = Players:GetPlayerFromCharacter(hit.Parent)
             if touchedPlayer and touchedPlayer ~= LocalPlayer then
-                hopToServer() -- Hop server nếu chạm vào người chơi khác
+                -- Đảm bảo chỉ hop server khi chạm vào một người chơi khác
+                if touchedPlayer.Character and touchedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    print("Touched player: " .. touchedPlayer.Name) -- Debug
+                    hopToServer() -- Hop server nếu chạm vào người chơi khác
+                end
             end
         end)
     end
