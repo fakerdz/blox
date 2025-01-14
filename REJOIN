@@ -10,12 +10,14 @@ local checkDelay = 10
 local lastPosition = nil
 local timeStuck = 0
 
--- Hàm hop server
+-- Hàm hop server ít người chơi nhất
 local function hopToServer()
     local success = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
         local bestServer = nil
+
+        -- Duyệt qua danh sách server để chọn server ít người chơi nhất
         for _, server in ipairs(response.data) do
             if server.id ~= game.JobId and server.playing < server.maxPlayers then
                 if not bestServer or server.playing < bestServer.playing then
@@ -23,12 +25,17 @@ local function hopToServer()
                 end
             end
         end
+
+        -- Nếu tìm được server tốt, teleport đến đó
         if bestServer then
             TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer.id, LocalPlayer)
         else
+            -- Nếu không tìm được server tốt, teleport vào game
             TeleportService:Teleport(game.PlaceId)
         end
     end)
+
+    -- Nếu có lỗi, fallback teleport đến game hiện tại
     if not success then
         TeleportService:Teleport(game.PlaceId)
     end
@@ -42,7 +49,7 @@ local function detectTouch()
         humanoidRootPart.Touched:Connect(function(hit)
             local touchedPlayer = Players:GetPlayerFromCharacter(hit.Parent)
             if touchedPlayer and touchedPlayer ~= LocalPlayer then
-                hopToServer() -- Hop server khi có người chơi chạm vào mình
+                hopToServer() -- Hop server nếu chạm vào người chơi khác
             end
         end)
     end
