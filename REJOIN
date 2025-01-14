@@ -62,16 +62,23 @@ end
 
 -- Bắt sự kiện chạm với người chơi khác
 local function detectTouch()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local humanoidRootPart = LocalPlayer.Character.HumanoidRootPart
-
-        humanoidRootPart.Touched:Connect(function(hit)
-            local touchedPlayer = Players:GetPlayerFromCharacter(hit.Parent)
-            if touchedPlayer and touchedPlayer ~= LocalPlayer then
-                hopToServer() -- Hop server nếu chạm vào người chơi khác
+    spawn(function()
+        while true do
+            task.wait()
+            local character = LocalPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local humanoidRootPart = character.HumanoidRootPart
+                humanoidRootPart.Touched:Connect(function(hit)
+                    local touchedPlayer = Players:GetPlayerFromCharacter(hit.Parent)
+                    if touchedPlayer and touchedPlayer ~= LocalPlayer then
+                        print("Touched player: " .. touchedPlayer.Name) -- Debug
+                        hopToServer() -- Hop server nếu chạm vào người chơi khác
+                    end
+                end)
+                break
             end
-        end)
-    end
+        end
+    end)
 end
 
 -- Kiểm tra kẹt vị trí
@@ -91,7 +98,7 @@ local function checkStuck()
 end
 
 -- Khởi chạy bắt sự kiện chạm
-spawn(detectTouch)
+detectTouch()
 
 -- Vòng lặp chính
 while true do
