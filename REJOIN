@@ -66,7 +66,7 @@ local function checkStuck()
         if lastPosition and (myPosition - lastPosition).Magnitude < 1 then
             timeStuck = timeStuck + checkDelay
             if timeStuck >= positionCheckDelay then
-                hopToServer()
+                hopToServer()  -- Chuyển server nếu kẹt vị trí lâu
             end
         else
             timeStuck = 0
@@ -84,6 +84,7 @@ while true do
     checkStuck()
     task.wait(checkDelay)
 end
+
 
 -- Gửi thông điệp mỗi 5 phút
 spawn(function()
