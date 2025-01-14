@@ -5,7 +5,6 @@ local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
-local checkRadius = 1000
 local positionCheckDelay = 180
 local checkDelay = 10
 local lastPosition = nil
@@ -16,7 +15,7 @@ local function hopToServer()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
         local bestServer = nil
-        for , server in ipairs(response.data) do
+        for _, server in ipairs(response.data) do
             if server.id ~= game.JobId and server.playing < server.maxPlayers then
                 if not bestServer or server.playing < bestServer.playing then
                     bestServer = server
@@ -34,17 +33,18 @@ local function hopToServer()
     end
 end
 
-local function isNearPlayer()
-    for , player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local playerPosition = player.Character.HumanoidRootPart.Position
-            local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
-            if myPosition and (playerPosition - myPosition).Magnitude <= checkRadius then
-                return true
+-- Bắt sự kiện chạm với người chơi khác
+local function detectTouch()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local humanoidRootPart = LocalPlayer.Character.HumanoidRootPart
+
+        humanoidRootPart.Touched:Connect(function(hit)
+            local touchedPlayer = Players:GetPlayerFromCharacter(hit.Parent)
+            if touchedPlayer and touchedPlayer ~= LocalPlayer then
+                hopToServer() -- Hop to a low player server
             end
-        end
+        end)
     end
-    return false
 end
 
 -- Kiểm tra kẹt vị trí
@@ -63,15 +63,11 @@ local function checkStuck()
     end
 end
 
+-- Khởi chạy
+spawn(detectTouch)
+
 -- Vòng lặp chính
 while true do
-    -- Nếu phát hiện người chơi gần, đổi server
-    if isNearPlayer() then
-        task.wait(math.random(60, 120)) -- Chờ ngẫu nhiên 60-120 giây
-        hopToServer()
-        break
-    end
-
     -- Kiểm tra kẹt vị trí
     checkStuck()
     task.wait(checkDelay)
