@@ -5,6 +5,7 @@ local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
+local checkRadius = 1000
 local positionCheckDelay = 180
 local checkDelay = 10
 local lastPosition = nil
@@ -12,76 +13,55 @@ local timeStuck = 0
 
 -- Hàm hop server
 local function hopToServer(targetPlaceId)
-    -- Sử dụng game.PlaceId hiện tại nếu không cung cấp targetPlaceId
     targetPlaceId = targetPlaceId or game.PlaceId
-
     local success = pcall(function()
         local urlTemplate = "https://games.roblox.com/v1/games/" .. targetPlaceId .. "/servers/Public?sortOrder=Asc&limit=100&cursor="
-        local cursor = "" -- Con trỏ để duyệt qua các trang server
+        local cursor = ""
         local bestServer = nil
 
         while true do
-            -- Lấy dữ liệu server từ API
             local response = HttpService:JSONDecode(game:HttpGet(urlTemplate .. cursor))
             for _, server in ipairs(response.data) do
-                -- Tìm server ít người chơi nhất và không trùng JobId hiện tại
                 if server.id ~= game.JobId and server.playing < server.maxPlayers then
                     if not bestServer or server.playing < bestServer.playing then
                         bestServer = server
                     end
                 end
             end
-
-            -- Nếu tìm được server phù hợp, dừng việc duyệt thêm
-            if bestServer then
-                break
-            end
-
-            -- Kiểm tra xem có tiếp tục duyệt qua trang khác không
+            if bestServer then break end
             if response.nextPageCursor then
                 cursor = response.nextPageCursor
             else
-                break -- Không còn server nào nữa
+                break
             end
         end
 
-        -- Teleport đến server ít người chơi nhất
         if bestServer then
             TeleportService:TeleportToPlaceInstance(targetPlaceId, bestServer.id, LocalPlayer)
         else
-            -- Nếu không tìm được server nào tốt, teleport vào game
             TeleportService:Teleport(targetPlaceId)
         end
     end)
-
-    -- Nếu có lỗi, fallback teleport đến game hiện tại
     if not success then
         TeleportService:Teleport(targetPlaceId)
     end
 end
 
--- Bắt sự kiện chạm với người chơi khác
-local function detectTouch()
-    spawn(function()
-        while true do
-            task.wait()
-            local character = LocalPlayer.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local humanoidRootPart = character.HumanoidRootPart
-                humanoidRootPart.Touched:Connect(function(hit)
-                    local touchedPlayer = Players:GetPlayerFromCharacter(hit.Parent)
-                    if touchedPlayer and touchedPlayer ~= LocalPlayer then
-                        print("Touched player: " .. touchedPlayer.Name) -- Debug
-                        hopToServer() -- Hop server nếu chạm vào người chơi khác
-                    end
-                end)
-                break
+-- Hàm kiểm tra người chơi gần
+local function isNearPlayer()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local playerPosition = player.Character.HumanoidRootPart.Position
+            local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
+            if myPosition and (playerPosition - myPosition).Magnitude <= checkRadius then
+                return true
             end
         end
-    end)
+    end
+    return false
 end
 
--- Kiểm tra kẹt vị trí
+-- Hàm kiểm tra kẹt vị trí
 local function checkStuck()
     local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
     if myPosition then
@@ -97,21 +77,33 @@ local function checkStuck()
     end
 end
 
--- Khởi chạy bắt sự kiện chạm
-detectTouch()
+-- Hàm bắt sự kiện chạm người chơi khác
+local function detectTouch()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local humanoidRootPart = LocalPlayer.Character.HumanoidRootPart
+        humanoidRootPart.Touched:Connect(function(hit)
+            local touchedPlayer = Players:GetPlayerFromCharacter(hit.Parent)
+            if touchedPlayer and touchedPlayer ~= LocalPlayer then
+                print("Touched player: " .. touchedPlayer.Name) -- Debug
+                hopToServer()
+            end
+        end)
+    end
+end
+
+-- Chạy sự kiện phát hiện chạm
+spawn(detectTouch)
 
 -- Vòng lặp chính
 while true do
+    -- Nếu phát hiện người chơi gần, hop server sau khoảng thời gian ngẫu nhiên
+    if isNearPlayer() then
+        task.wait(math.random(60, 120)) -- Chờ ngẫu nhiên 60-120 giây
+        hopToServer()
+        break
+    end
+
     -- Kiểm tra kẹt vị trí
     checkStuck()
     task.wait(checkDelay)
 end
-
--- Gửi thông điệp mỗi 5 phút
-spawn(function()
-    while true do 
-        task.wait(300)
-        local Messages = "mua acc tai fakervn . c om"
-        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Messages, "All")
-    end
-end)
