@@ -10,26 +10,53 @@ local checkDelay = 10
 local lastPosition = nil
 local timeStuck = 0
 
-local function hopToServer()
+-- Hàm hop server
+local function hopToServer(targetPlaceId)
+    -- Sử dụng game.PlaceId hiện tại nếu không cung cấp targetPlaceId
+    targetPlaceId = targetPlaceId or game.PlaceId
+
     local success = pcall(function()
-        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-        local response = HttpService:JSONDecode(game:HttpGet(url))
+        local urlTemplate = "https://games.roblox.com/v1/games/" .. targetPlaceId .. "/servers/Public?sortOrder=Asc&limit=100&cursor="
+        local cursor = "" -- Con trỏ để duyệt qua các trang server
         local bestServer = nil
-        for _, server in ipairs(response.data) do
-            if server.id ~= game.JobId and server.playing < server.maxPlayers then
-                if not bestServer or server.playing < bestServer.playing then
-                    bestServer = server
+
+        while true do
+            -- Lấy dữ liệu server từ API
+            local response = HttpService:JSONDecode(game:HttpGet(urlTemplate .. cursor))
+            for _, server in ipairs(response.data) do
+                -- Tìm server ít người chơi nhất và không trùng JobId hiện tại
+                if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                    if not bestServer or server.playing < bestServer.playing then
+                        bestServer = server
+                    end
                 end
             end
+
+            -- Nếu tìm được server phù hợp, dừng việc duyệt thêm
+            if bestServer then
+                break
+            end
+
+            -- Kiểm tra xem có tiếp tục duyệt qua trang khác không
+            if response.nextPageCursor then
+                cursor = response.nextPageCursor
+            else
+                break -- Không còn server nào nữa
+            end
         end
+
+        -- Teleport đến server ít người chơi nhất
         if bestServer then
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer.id, LocalPlayer)
+            TeleportService:TeleportToPlaceInstance(targetPlaceId, bestServer.id, LocalPlayer)
         else
-            TeleportService:Teleport(game.PlaceId)
+            -- Nếu không tìm được server nào tốt, teleport vào game
+            TeleportService:Teleport(targetPlaceId)
         end
     end)
+
+    -- Nếu có lỗi, fallback teleport đến game hiện tại
     if not success then
-        TeleportService:Teleport(game.PlaceId)
+        TeleportService:Teleport(targetPlaceId)
     end
 end
 
@@ -41,7 +68,7 @@ local function detectTouch()
         humanoidRootPart.Touched:Connect(function(hit)
             local touchedPlayer = Players:GetPlayerFromCharacter(hit.Parent)
             if touchedPlayer and touchedPlayer ~= LocalPlayer then
-                hopToServer() -- Hop to a low player server
+                hopToServer() -- Hop server nếu chạm vào người chơi khác
             end
         end)
     end
@@ -63,7 +90,7 @@ local function checkStuck()
     end
 end
 
--- Khởi chạy
+-- Khởi chạy bắt sự kiện chạm
 spawn(detectTouch)
 
 -- Vòng lặp chính
@@ -73,6 +100,7 @@ while true do
     task.wait(checkDelay)
 end
 
+-- Gửi thông điệp mỗi 5 phút
 spawn(function()
     while true do 
         task.wait(300)
