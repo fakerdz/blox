@@ -13,24 +13,21 @@ local timeStuck = 0
 
 local function hopToServer(targetPlaceId)
     targetPlaceId = targetPlaceId or game.PlaceId
-    local serverFound = false
 
-    while not serverFound do
+    while true do
         local success = pcall(function()
             local urlTemplate = "https://games.roblox.com/v1/games/" .. targetPlaceId .. "/servers/Public?sortOrder=Asc&limit=100&cursor="
             local cursor = ""
-            local bestServer = nil
+            local lowPlayerServers = {}
 
+            -- Tìm kiếm server với số lượng người chơi thấp
             while true do
                 local response = HttpService:JSONDecode(game:HttpGet(urlTemplate .. cursor))
                 for _, server in ipairs(response.data) do
-                    if server.id ~= game.JobId and server.playing < server.maxPlayers then
-                        if not bestServer or server.playing < bestServer.playing then
-                            bestServer = server
-                        end
+                    if server.id ~= game.JobId and server.playing <= 2 and server.playing < server.maxPlayers then
+                        table.insert(lowPlayerServers, server)
                     end
                 end
-                if bestServer then break end
                 if response.nextPageCursor then
                     cursor = response.nextPageCursor
                 else
@@ -38,16 +35,21 @@ local function hopToServer(targetPlaceId)
                 end
             end
 
-            if bestServer then
-                serverFound = true
-                TeleportService:TeleportToPlaceInstance(targetPlaceId, bestServer.id, LocalPlayer)
-            else
-                TeleportService:Teleport(targetPlaceId)
+            -- Nếu tìm thấy server phù hợp
+            if #lowPlayerServers > 0 then
+                local randomIndex = math.random(1, #lowPlayerServers)
+                local selectedServer = lowPlayerServers[randomIndex]
+                TeleportService:TeleportToPlaceInstance(targetPlaceId, selectedServer.id, LocalPlayer)
+                return -- Thành công, thoát khỏi vòng lặp
             end
         end)
 
+        -- Nếu không thành công, thử lại sau 2 giây
         if not success then
-            task.wait(2) -- Thử lại sau 2 giây
+            task.wait(2)
+        else
+            -- Nếu không tìm thấy server nào phù hợp, chờ trước khi thử lại
+            task.wait(5)
         end
     end
 end
@@ -93,16 +95,6 @@ while true do
     checkStuck()
     task.wait(checkDelay)
 end
-
--- Gửi thông điệp mỗi 5 phút
-spawn(function()
-    while true do 
-        task.wait(300)
-        local Messages = "mua acc tai fakervn . c om"
-        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Messages, "All")
-    end
-end)
-
 
 -- Gửi thông điệp mỗi 5 phút
 spawn(function()
