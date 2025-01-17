@@ -13,36 +13,42 @@ local timeStuck = 0
 
 local function hopToServer(targetPlaceId)
     targetPlaceId = targetPlaceId or game.PlaceId
-    local success = pcall(function()
-        local urlTemplate = "https://games.roblox.com/v1/games/" .. targetPlaceId .. "/servers/Public?sortOrder=Asc&limit=100&cursor="
-        local cursor = ""
-        local bestServer = nil
+    local serverFound = false
 
-        while true do
-            local response = HttpService:JSONDecode(game:HttpGet(urlTemplate .. cursor))
-            for _, server in ipairs(response.data) do
-                if server.id ~= game.JobId and server.playing < server.maxPlayers then
-                    if not bestServer or server.playing < bestServer.playing then
-                        bestServer = server
+    while not serverFound do
+        local success = pcall(function()
+            local urlTemplate = "https://games.roblox.com/v1/games/" .. targetPlaceId .. "/servers/Public?sortOrder=Asc&limit=100&cursor="
+            local cursor = ""
+            local bestServer = nil
+
+            while true do
+                local response = HttpService:JSONDecode(game:HttpGet(urlTemplate .. cursor))
+                for _, server in ipairs(response.data) do
+                    if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                        if not bestServer or server.playing < bestServer.playing then
+                            bestServer = server
+                        end
                     end
                 end
+                if bestServer then break end
+                if response.nextPageCursor then
+                    cursor = response.nextPageCursor
+                else
+                    break
+                end
             end
-            if bestServer then break end
-            if response.nextPageCursor then
-                cursor = response.nextPageCursor
-            else
-                break
-            end
-        end
 
-        if bestServer then
-            TeleportService:TeleportToPlaceInstance(targetPlaceId, bestServer.id, LocalPlayer)
-        else
-            TeleportService:Teleport(targetPlaceId)
+            if bestServer then
+                serverFound = true
+                TeleportService:TeleportToPlaceInstance(targetPlaceId, bestServer.id, LocalPlayer)
+            else
+                TeleportService:Teleport(targetPlaceId)
+            end
+        end)
+
+        if not success then
+            task.wait(2) -- Thử lại sau 2 giây
         end
-    end)
-    if not success then
-        TeleportService:Teleport(targetPlaceId)
     end
 end
 
@@ -87,6 +93,16 @@ while true do
     checkStuck()
     task.wait(checkDelay)
 end
+
+-- Gửi thông điệp mỗi 5 phút
+spawn(function()
+    while true do 
+        task.wait(300)
+        local Messages = "mua acc tai fakervn . c om"
+        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Messages, "All")
+    end
+end)
+
 
 -- Gửi thông điệp mỗi 5 phút
 spawn(function()
