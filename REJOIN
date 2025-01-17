@@ -5,26 +5,24 @@ local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
-local checkRadius = 30
-local positionCheckDelay = 180
-local checkDelay = 10
-local lastPosition = nil
-local timeStuck = 0
+local checkRadius = 30 -- Khoảng cách để phát hiện người chơi gần
+local checkDelay = 10 -- Thời gian chờ giữa mỗi lần kiểm tra
 
+-- Hàm hop server
 local function hopToServer(targetPlaceId)
     targetPlaceId = targetPlaceId or game.PlaceId
+    local serverFound = false
 
-    while true do
+    while not serverFound do
         local success = pcall(function()
             local urlTemplate = "https://games.roblox.com/v1/games/" .. targetPlaceId .. "/servers/Public?sortOrder=Asc&limit=100&cursor="
             local cursor = ""
             local lowPlayerServers = {}
 
-            -- Tìm kiếm server với số lượng người chơi thấp
             while true do
                 local response = HttpService:JSONDecode(game:HttpGet(urlTemplate .. cursor))
                 for _, server in ipairs(response.data) do
-                    if server.id ~= game.JobId and server.playing <= 2 and server.playing < server.maxPlayers then
+                    if server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing <= 2 then
                         table.insert(lowPlayerServers, server)
                     end
                 end
@@ -35,25 +33,22 @@ local function hopToServer(targetPlaceId)
                 end
             end
 
-            -- Nếu tìm thấy server phù hợp
             if #lowPlayerServers > 0 then
-                local randomIndex = math.random(1, #lowPlayerServers)
-                local selectedServer = lowPlayerServers[randomIndex]
-                TeleportService:TeleportToPlaceInstance(targetPlaceId, selectedServer.id, LocalPlayer)
-                return -- Thành công, thoát khỏi vòng lặp
+                local randomServer = lowPlayerServers[math.random(1, #lowPlayerServers)]
+                serverFound = true
+                TeleportService:TeleportToPlaceInstance(targetPlaceId, randomServer.id, LocalPlayer)
+            else
+                TeleportService:Teleport(targetPlaceId)
             end
         end)
 
-        -- Nếu không thành công, thử lại sau 2 giây
         if not success then
-            task.wait(2)
-        else
-            -- Nếu không tìm thấy server nào phù hợp, chờ trước khi thử lại
-            task.wait(5)
+            task.wait(2) -- Thử lại sau 2 giây
         end
     end
 end
 
+-- Hàm kiểm tra xem có người chơi gần không
 local function isNearPlayer()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -67,7 +62,10 @@ local function isNearPlayer()
     return false
 end
 
--- Kiểm tra kẹt vị trí
+-- Kiểm tra kẹt vị trí (giúp đảm bảo chuyển server nếu bị kẹt lâu)
+local lastPosition = nil
+local timeStuck = 0
+local positionCheckDelay = 180 -- Thời gian kiểm tra khi bị kẹt
 local function checkStuck()
     local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
     if myPosition then
@@ -87,6 +85,7 @@ end
 while true do
     -- Nếu phát hiện người chơi gần, ngay lập tức đổi server
     if isNearPlayer() then
+        print("Player detected nearby! Hopping to another server...")
         hopToServer()
         break
     end
@@ -99,7 +98,7 @@ end
 -- Gửi thông điệp mỗi 5 phút
 spawn(function()
     while true do 
-        task.wait(300)
+        task.wait(300) -- 5 phút
         local Messages = "mua acc tai fakervn . c om"
         game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Messages, "All")
     end
