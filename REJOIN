@@ -1,54 +1,58 @@
+-- Đợi cho đến khi game hoàn tất tải
 repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")  -- Đảm bảo PlayerGui đã sẵn sàng
+local checkRadius = 30
+local positionCheckDelay = 180
+local checkDelay = 10
+local lastPosition = nil
+local timeStuck = 0
 
-local LocalPlayer = Players.LocalPlayer
-local checkRadius = 30 -- Khoảng cách để phát hiện người chơi gần
-local checkDelay = 10 -- Thời gian chờ giữa mỗi lần kiểm tra
-
--- Hàm hop server
+-- Hàm để chuyển đến server có lượng người chơi thấp nhất
 local function hopToServer(targetPlaceId)
     targetPlaceId = targetPlaceId or game.PlaceId
-    local serverFound = false
+    local success, error = pcall(function()
+        local urlTemplate = "https://games.roblox.com/v1/games/" .. targetPlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        local cursor = ""
+        local bestServers = {}  -- Danh sách các server có lượng người chơi thấp nhất
+        local lowestPlayers = nil
 
-    while not serverFound do
-        local success = pcall(function()
-            local urlTemplate = "https://games.roblox.com/v1/games/" .. targetPlaceId .. "/servers/Public?sortOrder=Asc&limit=100&cursor="
-            local cursor = ""
-            local lowPlayerServers = {}
-
-            while true do
-                local response = HttpService:JSONDecode(game:HttpGet(urlTemplate .. cursor))
-                for _, server in ipairs(response.data) do
-                    if server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing <= 2 then
-                        table.insert(lowPlayerServers, server)
+        repeat
+            local response = HttpService:JSONDecode(HttpService:GetAsync(urlTemplate .. "&cursor=" .. cursor))
+            for _, server in ipairs(response.data) do
+                if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                    -- Xác định server có lượng người chơi thấp nhất
+                    if not lowestPlayers or server.playing < lowestPlayers then
+                        bestServers = {server}
+                        lowestPlayers = server.playing
+                    elseif server.playing == lowestPlayers then
+                        table.insert(bestServers, server)
                     end
                 end
-                if response.nextPageCursor then
-                    cursor = response.nextPageCursor
-                else
-                    break
-                end
             end
+            cursor = response.nextPageCursor or ""
+        until not cursor or #bestServers >= 10  -- Lấy tối đa 10 server
 
-            if #lowPlayerServers > 0 then
-                local randomServer = lowPlayerServers[math.random(1, #lowPlayerServers)]
-                serverFound = true
-                TeleportService:TeleportToPlaceInstance(targetPlaceId, randomServer.id, LocalPlayer)
-            else
-                TeleportService:Teleport(targetPlaceId)
-            end
-        end)
-
-        if not success then
-            task.wait(2) -- Thử lại sau 2 giây
+        if #bestServers > 0 then
+            local chosenServer = bestServers[math.random(#bestServers)]  -- Chọn ngẫu nhiên một server từ danh sách
+            TeleportService:TeleportToPlaceInstance(targetPlaceId, chosenServer.id, LocalPlayer)
+        else
+            TeleportService:Teleport(targetPlaceId, LocalPlayer)
         end
+    end)
+
+    if not success then
+        warn("Teleport failed: " .. tostring(error))
+        TeleportService:Teleport(targetPlaceId, LocalPlayer)
     end
 end
 
--- Hàm kiểm tra xem có người chơi gần không
+-- Kiểm tra người chơi xung quanh
 local function isNearPlayer()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -62,10 +66,7 @@ local function isNearPlayer()
     return false
 end
 
--- Kiểm tra kẹt vị trí (giúp đảm bảo chuyển server nếu bị kẹt lâu)
-local lastPosition = nil
-local timeStuck = 0
-local positionCheckDelay = 180 -- Thời gian kiểm tra khi bị kẹt
+-- Kiểm tra người chơi có bị kẹt không
 local function checkStuck()
     local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
     if myPosition then
@@ -73,6 +74,7 @@ local function checkStuck()
             timeStuck = timeStuck + checkDelay
             if timeStuck >= positionCheckDelay then
                 hopToServer()
+                timeStuck = 0  -- Reset timeStuck sau khi chuyển server
             end
         else
             timeStuck = 0
@@ -81,25 +83,42 @@ local function checkStuck()
     end
 end
 
--- Vòng lặp chính
+-- Hàm kiểm tra và thực hiện shutdown nếu đáp ứng điều kiện
+local function checkConditionsAndShutdown()
+    local levelLabel = playerGui:FindFirstChild("LevelLabel")
+    local healthLabel = playerGui:FindFirstChild("HealthLabel")
+    local moneyLabel = playerGui:FindFirstChild("MoneyLabel")
+    local energyLabel = playerGui:FindFirstChild("EnergyLabel")
+
+    if not levelLabel or not healthLabel or not moneyLabel or not energyLabel then
+        warn("One or more GUI elements are missing")
+        return
+    end
+
+    local levelText = levelLabel.Text
+    local healthText = healthLabel.Text
+    local moneyText = moneyLabel.Text
+    local energyText = energyLabel.Text
+
+    if levelText == "Lv. 1" and healthText == "Health 100/100" and moneyText == "$..." and energyText == "Energy 100/100" then
+        print("All conditions met for shutdown")
+        game:Shutdown()  -- Thay thế bằng hành động phù hợp nếu Shutdown không khả dụng
+    else
+        print("Conditions not met: ", levelText, healthText, moneyText, energyText)
+    end
+end
+
+-- Đăng ký kiểm tra điều kiện với sự kiện RenderStepped
+RunService.RenderStepped:Connect(checkConditionsAndShutdown)
+
+-- Vòng lặp chính để kiểm tra và chuyển server
 while true do
-    -- Nếu phát hiện người chơi gần, ngay lập tức đổi server
     if isNearPlayer() then
-        print("Player detected nearby! Hopping to another server...")
         hopToServer()
         break
     end
 
-    -- Kiểm tra kẹt vị trí
     checkStuck()
     task.wait(checkDelay)
 end
 
--- Gửi thông điệp mỗi 5 phút
-spawn(function()
-    while true do 
-        task.wait(300) -- 5 phút
-        local Messages = "mua acc tai fakervn . c om"
-        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Messages, "All")
-    end
-end)
