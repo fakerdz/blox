@@ -88,7 +88,6 @@ while true do
     task.wait(checkDelay)
 end
 
-
 spawn(function()
     while true do 
         task.wait(300) -- 5 phút
@@ -97,53 +96,33 @@ spawn(function()
     end
 end)
 
-local Players = game:GetService('Players')
-local Client = Players.LocalPlayer
+local startTime = os.time()
+local runDuration = 120 -- Chạy trong 120 giây (2 phút)
 
-_G.EnableFriendRequest = true
-_G.EnableAutoAcceptFriendRequest = true
-local interval = 60
+local function autoSendFriendRequest(targetPlayer)
+    if not LocalPlayer:IsFriendsWith(targetPlayer.UserId) then
+        LocalPlayer:RequestFriendship(targetPlayer)
+        print("Đã gửi yêu cầu kết bạn tới:", targetPlayer.Name)
+    end
+end
 
-local function SendFriendRequests()
+local function autoAcceptFriendRequests()
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= Client then  
-            Client:RequestFriendship(player)
-            warn("Đã gửi yêu cầu kết bạn tới:", player.Name)
+        if player ~= LocalPlayer and player:IsFriendRequestSent() then
+            LocalPlayer:AcceptFriendRequest(player)
+            print("Đã chấp nhận yêu cầu kết bạn từ:", player.Name)
         end
-        wait(1) 
     end
 end
 
-local function AutoAcceptFriendRequests()
-
-    Client.FriendRequestEvent:Connect(function(requestingPlayer)
-        if _G.EnableAutoAcceptFriendRequest then
-            Client:RequestFriendship(requestingPlayer) 
-            warn("Đã chấp nhận yêu cầu kết bạn từ:", requestingPlayer.Name)
+while os.time() - startTime < runDuration do
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            autoSendFriendRequest(player)
         end
-    end)
-end
-
-local function MainLoop()
-    while true do
-        if _G.EnableFriendRequest then
-            SendFriendRequests()
-        end
-        wait(interval)
     end
+    autoAcceptFriendRequests()
+    wait(5)
 end
 
-task.spawn(function()
-    AutoAcceptFriendRequests()
-end)
-
-task.spawn(function()
-    MainLoop()
-end)
-
-Client.Idled:connect(function()
-    local VirtualUser = game:GetService('VirtualUser')
-    VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-    wait(1)
-    VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-end)
+print("Đã dừng script sau 2 phút chạy.")
