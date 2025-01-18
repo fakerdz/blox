@@ -95,34 +95,3 @@ spawn(function()
         game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Messages, "All")
     end
 end)
-
-local startTime = os.time()
-local runDuration = 120 -- Chạy trong 120 giây (2 phút)
-
-local function autoSendFriendRequest(targetPlayer)
-    if not LocalPlayer:IsFriendsWith(targetPlayer.UserId) then
-        LocalPlayer:RequestFriendship(targetPlayer)
-        print("Đã gửi yêu cầu kết bạn tới:", targetPlayer.Name)
-    end
-end
-
-local function autoAcceptFriendRequests()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player:IsFriendRequestSent() then
-            LocalPlayer:AcceptFriendRequest(player)
-            print("Đã chấp nhận yêu cầu kết bạn từ:", player.Name)
-        end
-    end
-end
-
-while os.time() - startTime < runDuration do
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            autoSendFriendRequest(player)
-        end
-    end
-    autoAcceptFriendRequests()
-    wait(5)
-end
-
-print("Đã dừng script sau 2 phút chạy.")
