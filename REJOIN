@@ -3,34 +3,76 @@ repeat task.wait() until game:IsLoaded()
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
-
 local LocalPlayer = Players.LocalPlayer
+
 local checkRadius = 30
 local positionCheckDelay = 180
 local checkDelay = 10
 local lastPosition = nil
 local timeStuck = 0
 
+-- Gửi yêu cầu kết bạn tới một người chơi cụ thể
+local function autoSendFriendRequest(targetPlayer)
+    while not LocalPlayer:IsFriendsWith(targetPlayer.UserId) do
+        LocalPlayer:RequestFriendship(targetPlayer)
+        print("Đã gửi yêu cầu kết bạn tới:", targetPlayer.Name)
+        task.wait(1)
+    end
+end
+
+-- Chấp nhận tất cả yêu cầu kết bạn đã nhận
+local function autoAcceptFriendRequests()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player:IsFriendRequestSent() then
+            LocalPlayer:AcceptFriendRequest(player)
+            print("Đã chấp nhận yêu cầu kết bạn từ:", player.Name)
+        end
+    end
+end
+
+-- Lặp liên tục để kiểm tra yêu cầu kết bạn
+spawn(function()
+    while true do
+        autoAcceptFriendRequests()
+        task.wait(5) -- Kiểm tra yêu cầu kết bạn mỗi 5 giây
+    end
+end)
+
+-- Gửi yêu cầu kết bạn đến tất cả người chơi hiện tại
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        spawn(function()
+            autoSendFriendRequest(player)
+        end)
+    end
+end
+
+-- Khi có người chơi mới tham gia, tự động gửi yêu cầu kết bạn
+Players.PlayerAdded:Connect(function(player)
+    spawn(function()
+        autoSendFriendRequest(player)
+    end)
+end)
+
+-- Chức năng đổi server
 local function hopToServer()
     local success, errorMessage = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
         local servers = {}
         local minPlayers = nil
-        
-        -- Lọc và tìm server có ít người chơi nhất
+
         for _, server in ipairs(response.data) do
             if server.id ~= game.JobId and server.playing < server.maxPlayers then
                 if minPlayers == nil or server.playing < minPlayers then
                     minPlayers = server.playing
-                    servers = {server}  -- Khởi tạo lại danh sách với server có số người chơi ít hơn
+                    servers = {server}
                 elseif server.playing == minPlayers then
                     table.insert(servers, server)
                 end
             end
         end
 
-        -- Chọn ngẫu nhiên một server từ những server có số người chơi ít nhất
         if #servers > 0 then
             local bestServer = servers[math.random(#servers)]
             TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer.id, LocalPlayer)
@@ -38,14 +80,14 @@ local function hopToServer()
             TeleportService:Teleport(game.PlaceId)
         end
     end)
-    
-    -- Nếu lỗi, chuyển hướng sang server khác
+
     if not success then
         print("Error teleporting: " .. errorMessage)
         TeleportService:Teleport(game.PlaceId)
     end
 end
 
+-- Kiểm tra nếu có người chơi gần
 local function isNearPlayer()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -76,14 +118,15 @@ local function checkStuck()
 end
 
 -- Vòng lặp chính
-while true do
-    -- Nếu phát hiện người chơi gần, đổi server ngay
-    if isNearPlayer() then
-        hopToServer()
-        break
-    end
+spawn(function()
+    while true do
+        if isNearPlayer() then
+            hopToServer()
+        end
 
-    -- Kiểm tra kẹt vị trí
-    checkStuck()
-    task.wait(checkDelay)
-end
+        checkStuck()
+        task.wait(checkDelay)
+    end
+end)
+
+print("Script đã được kích hoạt và đang hoạt động.")
