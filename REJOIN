@@ -10,13 +10,20 @@ local positionCheckDelay = 180
 local checkDelay = 10
 local lastPosition = nil
 local timeStuck = 0
+local sentFriendRequests = {} -- Lưu trữ UserId của những người đã nhận yêu cầu
 
 -- Gửi yêu cầu kết bạn tới một người chơi cụ thể
 local function autoSendFriendRequest(targetPlayer)
-    while not LocalPlayer:IsFriendsWith(targetPlayer.UserId) do
-        LocalPlayer:RequestFriendship(targetPlayer)
-        print("Đã gửi yêu cầu kết bạn tới:", targetPlayer.Name)
-        task.wait(1)
+    if targetPlayer and not sentFriendRequests[targetPlayer.UserId] and not LocalPlayer:IsFriendsWith(targetPlayer.UserId) then
+        sentFriendRequests[targetPlayer.UserId] = true -- Đánh dấu đã gửi yêu cầu
+        local success, errorMessage = pcall(function()
+            LocalPlayer:RequestFriendship(targetPlayer)
+        end)
+        if success then
+            print("Đã gửi yêu cầu kết bạn tới:", targetPlayer.Name)
+        else
+            print("Không thể gửi yêu cầu kết bạn tới:", targetPlayer.Name, errorMessage)
+        end
     end
 end
 
@@ -24,8 +31,14 @@ end
 local function autoAcceptFriendRequests()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player:IsFriendRequestSent() then
-            LocalPlayer:AcceptFriendRequest(player)
-            print("Đã chấp nhận yêu cầu kết bạn từ:", player.Name)
+            local success, errorMessage = pcall(function()
+                LocalPlayer:AcceptFriendRequest(player)
+            end)
+            if success then
+                print("Đã chấp nhận yêu cầu kết bạn từ:", player.Name)
+            else
+                print("Lỗi khi chấp nhận yêu cầu từ:", player.Name, errorMessage)
+            end
         end
     end
 end
@@ -41,17 +54,13 @@ end)
 -- Gửi yêu cầu kết bạn đến tất cả người chơi hiện tại
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
-        spawn(function()
-            autoSendFriendRequest(player)
-        end)
+        autoSendFriendRequest(player)
     end
 end
 
 -- Khi có người chơi mới tham gia, tự động gửi yêu cầu kết bạn
 Players.PlayerAdded:Connect(function(player)
-    spawn(function()
-        autoSendFriendRequest(player)
-    end)
+    autoSendFriendRequest(player)
 end)
 
 -- Chức năng đổi server
