@@ -5,7 +5,7 @@ local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
-local checkRadius = 100
+local checkRadius = 30
 local positionCheckDelay = 180
 local checkDelay = 10
 local lastPosition = nil
@@ -87,6 +87,7 @@ while true do
     checkStuck()
     task.wait(checkDelay)
 end
+
 
 spawn(function()
     while true do 
