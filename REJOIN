@@ -5,77 +5,90 @@ local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
-local checkRadius = 30
+local checkRadius = 150 -- Mở rộng phạm vi để đảm bảo phát hiện người chơi gần
 local positionCheckDelay = 180
-local checkDelay = 10
+local checkDelay = 5
 local lastPosition = nil
 local timeStuck = 0
 
 local function hopToServer()
     local success, errorMessage = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        print("Đang lấy danh sách server từ:", url)
         local response = HttpService:JSONDecode(game:HttpGet(url))
         local servers = {}
         local minPlayers = nil
-        
-        -- Lọc và tìm server có ít người chơi nhất
+
         for _, server in ipairs(response.data) do
             if server.id ~= game.JobId and server.playing < server.maxPlayers then
                 if minPlayers == nil or server.playing < minPlayers then
                     minPlayers = server.playing
-                    servers = {server}  -- Khởi tạo lại danh sách với server có số người chơi ít hơn
+                    servers = {server}
                 elseif server.playing == minPlayers then
                     table.insert(servers, server)
                 end
             end
         end
 
-        -- Chọn ngẫu nhiên một server từ những server có số người chơi ít nhất
         if #servers > 0 then
             local bestServer = servers[math.random(#servers)]
+            print("Chuyển sang server:", bestServer.id)
             TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer.id, LocalPlayer)
         else
+            print("Không tìm thấy server phù hợp. Reload lại.")
             TeleportService:Teleport(game.PlaceId)
         end
     end)
-    
-    -- Nếu lỗi, chuyển hướng sang server khác
+
     if not success then
-        print("Error teleporting: " .. errorMessage)
+        warn("Lỗi khi hop server:", errorMessage)
         TeleportService:Teleport(game.PlaceId)
     end
 end
 
 local function isNearPlayer()
+    local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
+    if not myPosition then
+        print("Không tìm thấy vị trí của nhân vật.")
+        return false
+    end
+
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local playerPosition = player.Character.HumanoidRootPart.Position
-            local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
-            if myPosition and (playerPosition - myPosition).Magnitude <= checkRadius then
+            local distance = (playerPosition - myPosition).Magnitude
+            print("Khoảng cách đến", player.Name, ":", distance)
+
+            if distance <= checkRadius then
+                print("Phát hiện người chơi gần:", player.Name)
                 return true
             end
         end
     end
+
+    print("Không có người chơi nào gần.")
     return false
 end
 
--- Kiểm tra kẹt vị trí
 local function checkStuck()
     local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
     if myPosition then
-        if lastPosition and (myPosition - lastPosition).Magnitude < 1 then
+        if lastPosition and (myPosition - lastPosition).Magnitude < 2 then
             timeStuck = timeStuck + checkDelay
+            print("Phát hiện kẹt. Thời gian bị kẹt:", timeStuck, "giây")
             if timeStuck >= positionCheckDelay then
+                print("Kẹt quá lâu, chuyển server...")
                 hopToServer()
             end
         else
             timeStuck = 0
         end
         lastPosition = myPosition
+    else
+        print("Không tìm thấy vị trí của nhân vật.")
     end
 end
 
--- Vòng lặp chính
 while true do
     -- Nếu phát hiện người chơi gần, đổi server ngay
     if isNearPlayer() then
@@ -87,7 +100,6 @@ while true do
     checkStuck()
     task.wait(checkDelay)
 end
-
 
 spawn(function()
     while true do 
