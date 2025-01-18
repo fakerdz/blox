@@ -53,6 +53,7 @@ local function isNearPlayer()
         return false
     end
 
+    local foundPlayers = false -- Kiểm tra nếu có người chơi gần
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local playerPosition = player.Character.HumanoidRootPart.Position
@@ -61,13 +62,18 @@ local function isNearPlayer()
 
             if distance <= checkRadius then
                 print("Phát hiện người chơi gần:", player.Name)
-                return true
+                foundPlayers = true
             end
         end
     end
 
-    print("Không có người chơi nào gần.")
-    return false
+    if foundPlayers then
+        print("Đã phát hiện ít nhất một người chơi gần. Hop server.")
+        return true
+    else
+        print("Không có người chơi nào gần.")
+        return false
+    end
 end
 
 local function checkStuck()
