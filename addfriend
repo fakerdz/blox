@@ -1,9 +1,6 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local startTime = os.time()
-local runDuration = 120 -- Chạy trong 120 giây (2 phút)
-
 local function autoSendFriendRequest(targetPlayer)
     if not LocalPlayer:IsFriendsWith(targetPlayer.UserId) then
         LocalPlayer:RequestFriendship(targetPlayer)
@@ -20,14 +17,14 @@ local function autoAcceptFriendRequests()
     end
 end
 
-while os.time() - startTime < runDuration do
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            autoSendFriendRequest(player)
-        end
+-- Gửi yêu cầu kết bạn đến tất cả người chơi
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        autoSendFriendRequest(player)
     end
-    autoAcceptFriendRequests()
-    wait(5)
 end
 
-print("Đã dừng script sau 2 phút chạy.")
+-- Chấp nhận tất cả yêu cầu kết bạn đã nhận
+autoAcceptFriendRequests()
+
+print("Đã hoàn tất gửi và chấp nhận yêu cầu kết bạn. Script đã kết thúc.")
