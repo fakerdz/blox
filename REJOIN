@@ -3,34 +3,45 @@ repeat task.wait() until game:IsLoaded()
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
-local math = require("math")
 
 local LocalPlayer = Players.LocalPlayer
-local checkRadius = 30
+local checkRadius = 500
 local positionCheckDelay = 180
 local checkDelay = 10
 local lastPosition = nil
 local timeStuck = 0
 
 local function hopToServer()
-    local success = pcall(function()
+    local success, errorMessage = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
-        local eligibleServers = {}
+        local servers = {}
+        local minPlayers = nil
+        
+        -- Lọc và tìm server có ít người chơi nhất
         for _, server in ipairs(response.data) do
             if server.id ~= game.JobId and server.playing < server.maxPlayers then
-                table.insert(eligibleServers, server)
+                if minPlayers == nil or server.playing < minPlayers then
+                    minPlayers = server.playing
+                    servers = {server}  -- Khởi tạo lại danh sách với server có số người chơi ít hơn
+                elseif server.playing == minPlayers then
+                    table.insert(servers, server)
+                end
             end
         end
-        if #eligibleServers > 0 then
-            local randomIndex = math.random(#eligibleServers)
-            local bestServer = eligibleServers[randomIndex]
+
+        -- Chọn ngẫu nhiên một server từ những server có số người chơi ít nhất
+        if #servers > 0 then
+            local bestServer = servers[math.random(#servers)]
             TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer.id, LocalPlayer)
         else
             TeleportService:Teleport(game.PlaceId)
         end
     end)
+    
+    -- Nếu lỗi, chuyển hướng sang server khác
     if not success then
+        print("Error teleporting: " .. errorMessage)
         TeleportService:Teleport(game.PlaceId)
     end
 end
@@ -66,7 +77,7 @@ end
 
 -- Vòng lặp chính
 while true do
-    -- Nếu phát hiện người chơi gần, đổi server ngay lập tức
+    -- Nếu phát hiện người chơi gần, đổi server ngay
     if isNearPlayer() then
         hopToServer()
         break
@@ -76,6 +87,7 @@ while true do
     checkStuck()
     task.wait(checkDelay)
 end
+
 
 spawn(function()
     while true do 
