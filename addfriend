@@ -1,8 +1,13 @@
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+
+-- Lấy LocalPlayer khi cần thiết
+local function getLocalPlayer()
+    return Players.LocalPlayer
+end
 
 -- Gửi yêu cầu kết bạn tới một người chơi cụ thể
 local function autoSendFriendRequest(targetPlayer)
+    local LocalPlayer = getLocalPlayer()
     while not LocalPlayer:IsFriendsWith(targetPlayer.UserId) do
         LocalPlayer:RequestFriendship(targetPlayer)
         print("Đã gửi yêu cầu kết bạn tới:", targetPlayer.Name)
@@ -12,6 +17,7 @@ end
 
 -- Chấp nhận tất cả yêu cầu kết bạn đã nhận
 local function autoAcceptFriendRequests()
+    local LocalPlayer = getLocalPlayer()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player:IsFriendRequestSent() then
             LocalPlayer:AcceptFriendRequest(player)
@@ -30,7 +36,7 @@ end)
 
 -- Gửi yêu cầu kết bạn đến tất cả người chơi hiện tại
 for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
+    if player ~= getLocalPlayer() then
         spawn(function()
             autoSendFriendRequest(player)
         end)
