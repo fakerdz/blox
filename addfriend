@@ -3,9 +3,10 @@ local LocalPlayer = Players.LocalPlayer
 
 -- Gửi yêu cầu kết bạn tới một người chơi cụ thể
 local function autoSendFriendRequest(targetPlayer)
-    if not LocalPlayer:IsFriendsWith(targetPlayer.UserId) then
+    while not LocalPlayer:IsFriendsWith(targetPlayer.UserId) do
         LocalPlayer:RequestFriendship(targetPlayer)
         print("Đã gửi yêu cầu kết bạn tới:", targetPlayer.Name)
+        task.wait(1) -- Chờ 1 giây trước khi thử lại để tránh gửi quá nhanh
     end
 end
 
@@ -30,13 +31,17 @@ end)
 -- Gửi yêu cầu kết bạn đến tất cả người chơi hiện tại
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
-        autoSendFriendRequest(player)
+        spawn(function()
+            autoSendFriendRequest(player)
+        end)
     end
 end
 
 -- Khi có người chơi mới tham gia, tự động gửi yêu cầu kết bạn
 Players.PlayerAdded:Connect(function(player)
-    autoSendFriendRequest(player)
+    spawn(function()
+        autoSendFriendRequest(player)
+    end)
 end)
 
 print("Script đã được kích hoạt và đang hoạt động.")
