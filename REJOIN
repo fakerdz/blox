@@ -1,91 +1,46 @@
 repeat task.wait() until game:IsLoaded()
 
------------------------
--- KHAI BÁO DỊCH VỤ --
------------------------
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
+local math = require("math")
 
--------------------------
--- BIẾN CÀI ĐẶT SCRIPT --
--------------------------
 local LocalPlayer = Players.LocalPlayer
-local checkRadius = 30            -- Bán kính phát hiện người chơi gần
-local checkDelay = 10            -- Khoảng thời gian chờ giữa mỗi lần kiểm tra (giây)
-local positionCheckDelay = 180   -- Thời gian tối đa kẹt ở 1 chỗ (giây) trước khi hop server
-local lastPosition = nil         -- Vị trí cũ của nhân vật (dùng kiểm tra kẹt)
-local timeStuck = 0              -- Thời gian kẹt tích lũy
+local checkRadius = 30
+local positionCheckDelay = 180
+local checkDelay = 10
+local lastPosition = nil
+local timeStuck = 0
 
-----------------------------------
--- HÀM HOP SERVER (THỬ NHIỀU LẦN) --
-----------------------------------
-local function hopToServer(targetPlaceId)
-    targetPlaceId = targetPlaceId or game.PlaceId
-    local serverFound = false
-
-    print("Bắt đầu hop server...")
-
-    while not serverFound do
-        local success = pcall(function()
-            local urlTemplate = "https://games.roblox.com/v1/games/".. targetPlaceId .."/servers/Public?sortOrder=Asc&limit=100&cursor="
-            local cursor = ""
-            local lowPlayerServers = {}
-
-            -- Lấy danh sách server qua nhiều trang (nếu có)
-            while true do
-                print("Đang lấy danh sách server... Cursor:", cursor)
-                local response = HttpService:JSONDecode(game:HttpGet(urlTemplate .. cursor))
-                
-                for _, server in ipairs(response.data) do
-                    -- Chỉ lấy server khác server hiện tại, chưa đầy người, và có ≤ 2 người
-                    if server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing <= 2 then
-                        table.insert(lowPlayerServers, server)
-                    end
-                end
-
-                if response.nextPageCursor then
-                    cursor = response.nextPageCursor
-                else
-                    break
-                end
+local function hopToServer()
+    local success = pcall(function()
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        local response = HttpService:JSONDecode(game:HttpGet(url))
+        local eligibleServers = {}
+        for _, server in ipairs(response.data) do
+            if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                table.insert(eligibleServers, server)
             end
-
-            -- Nếu tìm thấy ít nhất 1 server phù hợp
-            if #lowPlayerServers > 0 then
-                local randomIndex = math.random(1, #lowPlayerServers)
-                local selectedServer = lowPlayerServers[randomIndex]
-                serverFound = true
-
-                print("Đã tìm thấy server phù hợp! Teleporting...")
-                TeleportService:TeleportToPlaceInstance(targetPlaceId, selectedServer.id, LocalPlayer)
-            else
-                print("Không tìm thấy server ít người chơi, teleport ngẫu nhiên...")
-                TeleportService:Teleport(targetPlaceId)  -- Hop đến server ngẫu nhiên
-            end
-        end)
-
-        if not success then
-            print("Hop server thất bại, thử lại sau 2 giây...")
-            task.wait(2)
         end
+        if #eligibleServers > 0 then
+            local randomIndex = math.random(#eligibleServers)
+            local bestServer = eligibleServers[randomIndex]
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer.id, LocalPlayer)
+        else
+            TeleportService:Teleport(game.PlaceId)
+        end
+    end)
+    if not success then
+        TeleportService:Teleport(game.PlaceId)
     end
 end
 
----------------------------------
--- HÀM KIỂM TRA NGƯỜI CHƠI GẦN --
----------------------------------
 local function isNearPlayer()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local playerPosition = player.Character.HumanoidRootPart.Position
-            local myPosition = LocalPlayer.Character
-                and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                and LocalPlayer.Character.HumanoidRootPart.Position
-
+            local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
             if myPosition and (playerPosition - myPosition).Magnitude <= checkRadius then
-                print("Phát hiện người chơi gần! Khoảng cách:",
-                    (playerPosition - myPosition).Magnitude)
                 return true
             end
         end
@@ -93,59 +48,39 @@ local function isNearPlayer()
     return false
 end
 
----------------------------------
--- HÀM KIỂM TRA NHÂN VẬT BỊ KẸT --
----------------------------------
+-- Kiểm tra kẹt vị trí
 local function checkStuck()
-    local myPosition = LocalPlayer.Character
-        and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        and LocalPlayer.Character.HumanoidRootPart.Position
-
+    local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
     if myPosition then
-        -- So sánh vị trí cũ và mới
         if lastPosition and (myPosition - lastPosition).Magnitude < 1 then
             timeStuck = timeStuck + checkDelay
-            print("Nhân vật không di chuyển, đã kẹt trong:", timeStuck, "giây.")
-
-            -- Nếu kẹt lâu hơn positionCheckDelay, hop server
             if timeStuck >= positionCheckDelay then
-                print("Nhân vật kẹt quá lâu, hop server...")
                 hopToServer()
             end
         else
-            -- Reset thời gian kẹt
             timeStuck = 0
         end
         lastPosition = myPosition
     end
 end
 
------------------------
--- VÒNG LẶP CHÍNH --
------------------------
+-- Vòng lặp chính
 while true do
-    -- Kiểm tra nếu có người chơi gần -> hop server ngay lập tức
+    -- Nếu phát hiện người chơi gần, đổi server ngay lập tức
     if isNearPlayer() then
-        print("Bắt đầu hop server vì có người chơi gần...")
         hopToServer()
         break
     end
 
     -- Kiểm tra kẹt vị trí
     checkStuck()
-
-    -- Đợi 1 khoảng thời gian rồi lặp lại
     task.wait(checkDelay)
 end
 
--------------------------------------
--- GỬI THÔNG ĐIỆP TỰ ĐỘNG MỖI 5 PHÚT --
--------------------------------------
 spawn(function()
     while true do 
-        task.wait(300)  -- 5 phút = 300 giây
+        task.wait(300) -- 5 phút
         local Messages = "mua acc tai fakervn . c om"
-        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents
-            .SayMessageRequest:FireServer(Messages, "All")
+        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Messages, "All")
     end
 end)
