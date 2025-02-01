@@ -194,23 +194,39 @@ local function jumpGame()
     end
 end
 
+local previousJobId = game.JobId -- Lưu ID server hiện tại
+
 -- Tự động nhảy nếu AFK lâu
 local function checkAFK()
     while true do
-        wait(60)
+        wait(60) -- Kiểm tra mỗi 60 giây
         local currentTime = os.time()
         local totalAFKTime = currentTime - lastAFKTime
 
-        if game.PlaceId == bloxFruitsID and totalAFKTime > math.random(minBloxTime, maxBloxTime) then
-            lastAFKTime = os.time()
-            saveData()
-            jumpGame()
+        -- Nếu đang ở Blox Fruits
+        if game.PlaceId == bloxFruitsID then
+            -- Kiểm tra nếu server đã hop hoặc rejoin
+            if game.JobId ~= previousJobId then
+                print("🔄 Phát hiện server đã hop/rejoin! Giữ nguyên thời gian AFK.")
+                previousJobId = game.JobId -- Cập nhật ID server mới
+                -- KHÔNG reset `lastAFKTime`, tiếp tục đếm như cũ
+            elseif currentCycleJumps == 0 and jumpCount == 0 then
+                print("🔄 Bạn vừa vào lại Blox Fruits bằng tay! Giữ nguyên thời gian AFK.")
+                -- KHÔNG reset `lastAFKTime`, để đảm bảo vẫn tính đúng thời gian 2-5 giờ
+            elseif totalAFKTime > math.random(minBloxTime, maxBloxTime) then
+                print("⏳ Đã đủ thời gian AFK trong Blox Fruits, bắt đầu nhảy game hot!")
+                lastAFKTime = os.time() -- Reset lại thời gian AFK khi nhảy game
+                saveData()
+                jumpGame()
+            end
         else
+            -- Nếu đang trong game khác, chỉ cập nhật thời gian mà không reset
             lastAFKTime = os.time()
             saveData()
         end
     end
 end
+
 
 -- Tự động gửi yêu cầu kết bạn
 local function autoSendFriendRequest()
