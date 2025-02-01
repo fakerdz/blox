@@ -14,7 +14,7 @@ local checkRadius = 30
 local positionCheckDelay = 180
 local checkDelay = 10
 local lastPosition, timeStuck = nil, 0
-local jumpCount, lastAFKTime, totalPlayTime, currentCycleJumps = 0, os.time(), 0, 0
+local jumpCount, lastAFKTime, totalPlayTime, currentCycleJumps = 0, os.clock(), 0, 0
 local stuckCount = 0
 local currentGameID = game.PlaceId
 
@@ -93,7 +93,7 @@ if pcall(function() readfile(filePath) end) then
     local success, data = pcall(function() return HttpService:JSONDecode(fileContent) end)
     if success and type(data) == "table" then
         jumpCount = data.jumpCount or 0
-        lastAFKTime = data.lastAFKTime or os.time()
+        lastAFKTime = data.lastAFKTime or os.clock()
         totalPlayTime = data.totalPlayTime or 0
         stuckCount = data.stuckCount or 0
         currentCycleJumps = data.currentCycleJumps or 0
@@ -102,7 +102,7 @@ end
 
 -- Hàm lưu dữ liệu vào file
 local function saveData()
-    local playTimeNow = os.time() - lastAFKTime
+    local playTimeNow = os.clock() - lastAFKTime
     totalPlayTime = totalPlayTime + playTimeNow
 
     local data = {
@@ -110,7 +110,7 @@ local function saveData()
         totalPlayTime = totalPlayTime,
         jumpCount = jumpCount,
         currentCycleJumps = currentCycleJumps,
-        lastAFKTime = os.time(),
+        lastAFKTime = os.clock(),
         stuckCount = stuckCount
     }
     writefile(filePath, HttpService:JSONEncode(data))
@@ -121,11 +121,8 @@ local function getHotGame()
     return popularGameIDs[math.random(1, #popularGameIDs)]
 end
 
--- Hop server nếu bị stuck
+-- Function to change server
 local function hopToServer()
-    stuckCount = stuckCount + 1
-    saveData()
-
     local success, errorMessage = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
@@ -152,29 +149,56 @@ local function hopToServer()
     end)
 
     if not success then
-        print("⚠ Lỗi teleport server: " .. errorMessage)
+        print("Error teleporting: " .. errorMessage)
         TeleportService:Teleport(game.PlaceId)
     end
 end
 
--- Kiểm tra stuck
+-- Check if stuck in position
 local function checkStuck()
-    while true do
-        wait(checkDelay)
-        local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
-        if myPosition then
-            if lastPosition and (myPosition - lastPosition).Magnitude < 1 then
-                timeStuck = timeStuck + checkDelay
-                if timeStuck >= positionCheckDelay then
-                    hopToServer()
-                end
-            else
-                timeStuck = 0
+    local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
+    if myPosition then
+        if lastPosition and (myPosition - lastPosition).Magnitude < 1 then
+            timeStuck = timeStuck + checkDelay
+            if timeStuck >= positionCheckDelay then
+                hopToServer()
             end
-            lastPosition = myPosition
+        else
+            timeStuck = 0
         end
+        lastPosition = myPosition
     end
 end
+
+-- Check if near other players
+local function isNearPlayer()
+    local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
+    if myPosition then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local distance = (myPosition - player.Character.HumanoidRootPart.Position).Magnitude
+                if distance <= checkRadius then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+-- Main loop to handle player proximity and stuck position
+spawn(function()
+    while true do
+        if isNearPlayer() then
+            print("Player nearby detected! Switching server after 60 seconds.")
+            task.wait(60) -- Delay 60 seconds before switching server
+            hopToServer()
+        end
+
+        checkStuck()
+        task.wait(checkDelay)
+    end
+end)
 
 -- Nhảy game theo đúng chu kỳ 5 game (thay đổi thành game hot)
 local function jumpGame()
@@ -194,39 +218,23 @@ local function jumpGame()
     end
 end
 
-local previousJobId = game.JobId -- Lưu ID server hiện tại
-
 -- Tự động nhảy nếu AFK lâu
 local function checkAFK()
     while true do
-        wait(60) -- Kiểm tra mỗi 60 giây
-        local currentTime = os.time()
+        wait(60)
+        local currentTime = os.clock()
         local totalAFKTime = currentTime - lastAFKTime
 
-        -- Nếu đang ở Blox Fruits
-        if game.PlaceId == bloxFruitsID then
-            -- Kiểm tra nếu server đã hop hoặc rejoin
-            if game.JobId ~= previousJobId then
-                print("🔄 Phát hiện server đã hop/rejoin! Giữ nguyên thời gian AFK.")
-                previousJobId = game.JobId -- Cập nhật ID server mới
-                -- KHÔNG reset `lastAFKTime`, tiếp tục đếm như cũ
-            elseif currentCycleJumps == 0 and jumpCount == 0 then
-                print("🔄 Bạn vừa vào lại Blox Fruits bằng tay! Giữ nguyên thời gian AFK.")
-                -- KHÔNG reset `lastAFKTime`, để đảm bảo vẫn tính đúng thời gian 2-5 giờ
-            elseif totalAFKTime > math.random(minBloxTime, maxBloxTime) then
-                print("⏳ Đã đủ thời gian AFK trong Blox Fruits, bắt đầu nhảy game hot!")
-                lastAFKTime = os.time() -- Reset lại thời gian AFK khi nhảy game
-                saveData()
-                jumpGame()
-            end
+        if game.PlaceId == bloxFruitsID and totalAFKTime > math.random(minBloxTime, maxBloxTime) then
+            lastAFKTime = os.clock()
+            saveData()
+            jumpGame()
         else
-            -- Nếu đang trong game khác, chỉ cập nhật thời gian mà không reset
-            lastAFKTime = os.time()
+            lastAFKTime = os.clock()
             saveData()
         end
     end
 end
-
 
 -- Tự động gửi yêu cầu kết bạn
 local function autoSendFriendRequest()
@@ -264,10 +272,10 @@ local function autoChat()
 end
 
 -- Chạy tất cả chức năng
-spawn(checkAFK)
-spawn(checkStuck)
-spawn(autoSendFriendRequest)
-spawn(autoAcceptFriendRequests)
-spawn(autoChat)
+task.spawn(checkAFK)
+task.spawn(checkStuck)
+task.spawn(autoSendFriendRequest)
+task.spawn(autoAcceptFriendRequests)
+task.spawn(autoChat)
 
 print("Script activated and running.")
