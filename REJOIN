@@ -6,7 +6,11 @@ local LocalPlayer = Players.LocalPlayer
 -- Cấu hình
 local folderPath = "faker/"
 local filePath = folderPath .. LocalPlayer.Name .. ".txt"
-local bloxFruitsID = 2753915549
+local bloxFruitsUniverseID = 2753915549 -- UniverseId của Blox Fruits
+local function isInBloxFruits()
+    return game.GameId == bloxFruitsUniverseID
+end
+
 local maxJumps = 5
 local minBloxTime, maxBloxTime = 7200, 18000
 local minGameTime, maxGameTime = 60, 300
