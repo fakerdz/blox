@@ -109,23 +109,28 @@ local function saveData()
     local playTimeNow = os.clock() - lastAFKTime
 
     if playTimeNow > 0 then
-        totalPlayTime = totalPlayTime + playTimeNow
-        lastAFKTime = os.clock()
+        totalPlayTime = totalPlayTime + playTimeNow -- Cộng dồn thời gian chơi chính xác
+        lastAFKTime = os.clock() -- Cập nhật lại thời gian AFK
     end
 
+    -- ✅ Luôn cập nhật `gameID` để phản ánh đúng Sea hiện tại
+    currentGameID = game.PlaceId 
+
     local data = {
-        gameID = currentGameID,
-        totalPlayTime = math.floor(totalPlayTime),
-        jumpCount = jumpCount,
-        currentCycleJumps = currentCycleJumps,
-        lastAFKTime = lastAFKTime,
-        stuckCount = stuckCount
+        gameID = currentGameID,  -- 🛠 Đảm bảo luôn đúng với Sea hiện tại
+        totalPlayTime = math.floor(totalPlayTime) .. "s", -- Hiển thị số giây đúng
+        jumpCount = math.floor(jumpCount),
+        currentCycleJumps = math.floor(currentCycleJumps),
+        lastAFKTime = lastAFKTime, -- Không chỉnh sửa `lastAFKTime`
+        stuckCount = math.floor(stuckCount)
     }
 
+    -- Ghi file JSON với số làm tròn
     pcall(function()
         writefile(filePath, HttpService:JSONEncode(data))
     end)
 end
+
 
 -- Lấy game hot ngẫu nhiên
 local function getHotGame()
