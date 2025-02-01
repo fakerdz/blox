@@ -8,11 +8,8 @@ local folderPath = "faker/"
 local filePath = folderPath .. LocalPlayer.Name .. ".txt"
 local bloxFruitsUniverseID = 2753915549 -- UniverseId của Blox Fruits
 local function isInBloxFruits()
-    return game.GameId == bloxFruitsUniverseID
-end
-
 local maxJumps = 5
-local minBloxTime, maxBloxTime = 7200, 18000
+local minBloxTime, maxBloxTime = 1, 10
 local minGameTime, maxGameTime = 60, 300
 local checkRadius = 30
 local positionCheckDelay = 180
@@ -36,7 +33,6 @@ local popularGameIDs = {
     9498006165  -- Blade Ball
 }
 
--- Danh sách tin nhắn tự động
 local messagesList = {
     "Hi!", "What is your name?", "How are you?", "What's up?", "Hello!", "Anyone here?", "Good game!",
     "Want to team up?", "Add me as a friend!", "Let's play together!", "Can you teach me this game?", "Anyone want to chat?",
@@ -109,28 +105,35 @@ local function saveData()
     local playTimeNow = os.clock() - lastAFKTime
 
     if playTimeNow > 0 then
-        totalPlayTime = totalPlayTime + playTimeNow -- Cộng dồn thời gian chơi chính xác
-        lastAFKTime = os.clock() -- Cập nhật lại thời gian AFK
+        totalPlayTime = totalPlayTime + playTimeNow
+        lastAFKTime = os.clock()
     end
 
-    -- ✅ Luôn cập nhật `gameID` để phản ánh đúng Sea hiện tại
-    currentGameID = game.PlaceId 
-
     local data = {
-        gameID = currentGameID,  -- 🛠 Đảm bảo luôn đúng với Sea hiện tại
-        totalPlayTime = math.floor(totalPlayTime) .. "s", -- Hiển thị số giây đúng
-        jumpCount = math.floor(jumpCount),
-        currentCycleJumps = math.floor(currentCycleJumps),
-        lastAFKTime = lastAFKTime, -- Không chỉnh sửa `lastAFKTime`
-        stuckCount = math.floor(stuckCount)
+        gameID = currentGameID,
+        totalPlayTime = math.floor(totalPlayTime),
+        jumpCount = jumpCount,
+        currentCycleJumps = currentCycleJumps,
+        lastAFKTime = lastAFKTime,
+        stuckCount = stuckCount
     }
 
-    -- Ghi file JSON với số làm tròn
     pcall(function()
         writefile(filePath, HttpService:JSONEncode(data))
     end)
 end
 
+-- Hàm reset thời gian AFK khi chuyển sea
+local function resetAFKTime()
+    lastAFKTime = os.clock()
+    saveData()
+    print("Đã reset thời gian AFK do chuyển sea.")
+end
+
+-- Theo dõi sự kiện teleport
+TeleportService.LocalPlayerTeleporting:Connect(function()
+    resetAFKTime()
+end)
 
 -- Lấy game hot ngẫu nhiên
 local function getHotGame()
