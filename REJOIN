@@ -103,17 +103,24 @@ end
 -- Hàm lưu dữ liệu vào file
 local function saveData()
     local playTimeNow = os.clock() - lastAFKTime
-    totalPlayTime = totalPlayTime + playTimeNow
+
+    if playTimeNow > 0 then
+        totalPlayTime = totalPlayTime + playTimeNow -- Cộng dồn thời gian chơi chính xác
+        lastAFKTime = os.clock() -- Cập nhật lại thời gian AFK
+    end
 
     local data = {
         gameID = currentGameID,
-        totalPlayTime = totalPlayTime,
-        jumpCount = jumpCount,
-        currentCycleJumps = currentCycleJumps,
-        lastAFKTime = os.clock(),
-        stuckCount = stuckCount
+        totalPlayTime = math.floor(totalPlayTime) .. "s", -- Hiển thị số giây đúng
+        jumpCount = math.floor(jumpCount),
+        currentCycleJumps = math.floor(currentCycleJumps),
+        lastAFKTime = lastAFKTime, -- Không chỉnh sửa `lastAFKTime`
+        stuckCount = math.floor(stuckCount)
     }
-    writefile(filePath, HttpService:JSONEncode(data))
+
+    -- Ghi file JSON với số làm tròn
+    pcall(function()
+        writefile(filePath, HttpService:JSONEncode(data))
 end
 
 -- Lấy game hot ngẫu nhiên
@@ -221,15 +228,21 @@ end
 -- Tự động nhảy nếu AFK lâu
 local function checkAFK()
     while true do
-        wait(60)
+        wait(60) -- Kiểm tra mỗi 60 giây
         local currentTime = os.clock()
         local totalAFKTime = currentTime - lastAFKTime
 
-        if game.PlaceId == bloxFruitsID and totalAFKTime > math.random(minBloxTime, maxBloxTime) then
-            lastAFKTime = os.clock()
-            saveData()
-            jumpGame()
+        -- Nếu đang ở Blox Fruits
+        if game.PlaceId == bloxFruitsID then
+            -- Kiểm tra nếu đủ 2-5 giờ trong Blox Fruits để nhảy game hot
+            if totalAFKTime >= math.random(minBloxTime, maxBloxTime) then
+                print("⏳ Đã đủ thời gian AFK trong Blox Fruits, bắt đầu nhảy game hot!")
+                lastAFKTime = os.clock() -- Reset lại thời gian AFK khi nhảy game
+                saveData()
+                jumpGame()
+            end
         else
+            -- Cập nhật lại thời gian đúng khi không ở Blox Fruits
             lastAFKTime = os.clock()
             saveData()
         end
