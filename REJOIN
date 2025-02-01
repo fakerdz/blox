@@ -3,35 +3,11 @@ local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
--- Cấu hình
-local folderPath = "faker/"
-local filePath = folderPath .. LocalPlayer.Name .. ".txt"
-local bloxFruitsUniverseID = 2753915549 -- UniverseId của Blox Fruits
-local function isInBloxFruits()
-local maxJumps = 5
-local minBloxTime, maxBloxTime = 1, 10
-local minGameTime, maxGameTime = 60, 300
 local checkRadius = 30
 local positionCheckDelay = 180
 local checkDelay = 10
-local lastPosition, timeStuck = nil, 0
-local jumpCount, lastAFKTime, totalPlayTime, currentCycleJumps = 0, os.clock(), 0, 0
-local stuckCount = 0
-local currentGameID = game.PlaceId
-
--- Danh sách game hot
-local popularGameIDs = {
-    2753915549, -- Blox Fruits
-    6516141723, -- DOORS
-    286090429,  -- Arsenal
-    155615604,  -- Prison Life
-    2788229376, -- Da Hood
-    3260590327, -- Tower Defense Simulator
-    142823291,  -- Murder Mystery 2
-    13772394663, -- Anime Fighting Simulator X
-    6284583030, -- Pet Simulator X
-    9498006165  -- Blade Ball
-}
+local lastPosition = nil
+local timeStuck = 0
 
 local messagesList = {
     "Hi!", "What is your name?", "How are you?", "What's up?", "Hello!", "Anyone here?", "Good game!",
@@ -82,62 +58,45 @@ local messagesList = {
     "What's the most underrated skill or item?", "Looking for the best gamer tips", "Who's ready for the next big challenge?"
 }
 
--- Tạo thư mục faker/ nếu chưa tồn tại
-if not isfolder(folderPath) then
-    makefolder(folderPath)
-end
-
--- Đọc dữ liệu từ file nếu đã tồn tại
-if pcall(function() readfile(filePath) end) then
-    local fileContent = readfile(filePath)
-    local success, data = pcall(function() return HttpService:JSONDecode(fileContent) end)
-    if success and type(data) == "table" then
-        jumpCount = data.jumpCount or 0
-        lastAFKTime = data.lastAFKTime or os.clock()
-        totalPlayTime = data.totalPlayTime or 0
-        stuckCount = data.stuckCount or 0
-        currentCycleJumps = data.currentCycleJumps or 0
+-- Hàm tự động gửi yêu cầu kết bạn
+local function autoSendFriendRequest()
+    while true do
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and not LocalPlayer:IsFriendsWith(player.UserId) then
+                LocalPlayer:RequestFriendship(player)
+                print("Đã gửi yêu cầu kết bạn tới:", player.Name)
+            end
+        end
+        wait(10) -- Đợi 10 giây giữa các lần gửi yêu cầu
     end
 end
 
--- Hàm lưu dữ liệu vào file
-local function saveData()
-    local playTimeNow = os.clock() - lastAFKTime
-
-    if playTimeNow > 0 then
-        totalPlayTime = totalPlayTime + playTimeNow
-        lastAFKTime = os.clock()
+-- Hàm tự động chấp nhận yêu cầu kết bạn
+local function autoAcceptFriendRequests()
+    while true do
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player:IsFriendRequestSent() then
+                LocalPlayer:AcceptFriendRequest(player)
+                print("Đã chấp nhận yêu cầu kết bạn từ:", player.Name)
+            end
+        end
+        wait(10) -- Đợi 10 giây giữa các lần kiểm tra
     end
-
-    local data = {
-        gameID = currentGameID,
-        totalPlayTime = math.floor(totalPlayTime),
-        jumpCount = jumpCount,
-        currentCycleJumps = currentCycleJumps,
-        lastAFKTime = lastAFKTime,
-        stuckCount = stuckCount
-    }
-
-    pcall(function()
-        writefile(filePath, HttpService:JSONEncode(data))
-    end)
 end
 
--- Hàm reset thời gian AFK khi chuyển sea
-local function resetAFKTime()
-    lastAFKTime = os.clock()
-    saveData()
-    print("Đã reset thời gian AFK do chuyển sea.")
-end
+-- Hàm tự động chat
+local function autoChat()
+    while true do
+        -- Chọn tin nhắn ngẫu nhiên từ danh sách
+        local randomIndex = math.random(1, #messagesList)
+        local randomMessage = messagesList[randomIndex]
 
--- Theo dõi sự kiện teleport
-TeleportService.LocalPlayerTeleporting:Connect(function()
-    resetAFKTime()
-end)
+        -- Gửi tin nhắn ngay lập tức
+        game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(randomMessage, "All")
 
--- Lấy game hot ngẫu nhiên
-local function getHotGame()
-    return popularGameIDs[math.random(1, #popularGameIDs)]
+        -- Đợi một thời gian ngẫu nhiên từ 10 đến 20 giây trước khi gửi tin nhắn tiếp theo
+        wait(math.random(10, 120))
+    end
 end
 
 -- Function to change server
@@ -210,7 +169,7 @@ spawn(function()
     while true do
         if isNearPlayer() then
             print("Player nearby detected! Switching server after 60 seconds.")
-            task.wait(60)
+            task.wait(60) -- Delay 60 seconds before switching server
             hopToServer()
         end
 
@@ -219,85 +178,9 @@ spawn(function()
     end
 end)
 
--- Nhảy game theo đúng chu kỳ 5 game (thay đổi thành game hot)
-local function jumpGame()
-    if currentCycleJumps < maxJumps then
-        currentCycleJumps = currentCycleJumps + 1
-        jumpCount = jumpCount + 1
-        saveData()
-        wait(math.random(minGameTime, maxGameTime))
-        local hotGame = getHotGame()
-        if hotGame then
-            TeleportService:Teleport(hotGame, LocalPlayer)
-        end
-    else
-        currentCycleJumps = 0
-        saveData()
-        TeleportService:Teleport(bloxFruitsID)
-    end
-end
-
--- Tự động nhảy nếu AFK lâu
-local function checkAFK()
-    while true do
-        wait(60)
-        local currentTime = os.clock()
-        local totalAFKTime = currentTime - lastAFKTime
-
-        if game.PlaceId == bloxFruitsID then
-            if totalAFKTime >= math.random(minBloxTime, maxBloxTime) then
-                print("⏳ Đã đủ thời gian AFK trong Blox Fruits, bắt đầu nhảy game hot!")
-                lastAFKTime = os.clock()
-                saveData()
-                jumpGame()
-            end
-        else
-            lastAFKTime = os.clock()
-            saveData()
-        end
-    end
-end
-
--- Tự động gửi yêu cầu kết bạn
-local function autoSendFriendRequest()
-    while true do
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and not LocalPlayer:IsFriendsWith(player.UserId) then
-                LocalPlayer:RequestFriendship(player)
-                print("Đã gửi yêu cầu kết bạn tới:", player.Name)
-            end
-        end
-        wait(10)
-    end
-end
-
--- Tự động chấp nhận yêu cầu kết bạn
-local function autoAcceptFriendRequests()
-    while true do
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player:IsFriendRequestSent() then
-                LocalPlayer:AcceptFriendRequest(player)
-                print("Đã chấp nhận yêu cầu kết bạn từ:", player.Name)
-            end
-        end
-        wait(10)
-    end
-end
-
--- Tự động chat
-local function autoChat()
-    while true do
-        local randomMessage = messagesList[math.random(1, #messagesList)]
-        game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(randomMessage, "All")
-        wait(math.random(10, 120))
-    end
-end
-
--- Chạy tất cả chức năng
-task.spawn(checkAFK)
-task.spawn(checkStuck)
-task.spawn(autoSendFriendRequest)
-task.spawn(autoAcceptFriendRequests)
-task.spawn(autoChat)
+-- Start auto functions
+spawn(autoSendFriendRequest)
+spawn(autoAcceptFriendRequests)
+spawn(autoChat)
 
 print("Script activated and running.")
