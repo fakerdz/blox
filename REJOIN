@@ -18,7 +18,7 @@ local jumpCount, lastAFKTime, totalPlayTime, currentCycleJumps = 0, os.clock(), 
 local stuckCount = 0
 local currentGameID = game.PlaceId
 
--- Danh sách game hot (chỉ một danh sách duy nhất)
+-- Danh sách game hot
 local popularGameIDs = {
     2753915549, -- Blox Fruits
     6516141723, -- DOORS
@@ -82,7 +82,7 @@ local messagesList = {
     "What's the most underrated skill or item?", "Looking for the best gamer tips", "Who's ready for the next big challenge?"
 }
 
--- Tạo thư mục `faker/` nếu chưa tồn tại
+-- Tạo thư mục faker/ nếu chưa tồn tại
 if not isfolder(folderPath) then
     makefolder(folderPath)
 end
@@ -105,22 +105,22 @@ local function saveData()
     local playTimeNow = os.clock() - lastAFKTime
 
     if playTimeNow > 0 then
-        totalPlayTime = totalPlayTime + playTimeNow -- Cộng dồn thời gian chơi chính xác
-        lastAFKTime = os.clock() -- Cập nhật lại thời gian AFK
+        totalPlayTime = totalPlayTime + playTimeNow
+        lastAFKTime = os.clock()
     end
 
     local data = {
         gameID = currentGameID,
-        totalPlayTime = math.floor(totalPlayTime) .. "s", -- Hiển thị số giây đúng
-        jumpCount = math.floor(jumpCount),
-        currentCycleJumps = math.floor(currentCycleJumps),
-        lastAFKTime = lastAFKTime, -- Không chỉnh sửa `lastAFKTime`
-        stuckCount = math.floor(stuckCount)
+        totalPlayTime = math.floor(totalPlayTime),
+        jumpCount = jumpCount,
+        currentCycleJumps = currentCycleJumps,
+        lastAFKTime = lastAFKTime,
+        stuckCount = stuckCount
     }
 
-    -- Ghi file JSON với số làm tròn
     pcall(function()
         writefile(filePath, HttpService:JSONEncode(data))
+    end)
 end
 
 -- Lấy game hot ngẫu nhiên
@@ -198,7 +198,7 @@ spawn(function()
     while true do
         if isNearPlayer() then
             print("Player nearby detected! Switching server after 60 seconds.")
-            task.wait(60) -- Delay 60 seconds before switching server
+            task.wait(60)
             hopToServer()
         end
 
@@ -228,21 +228,18 @@ end
 -- Tự động nhảy nếu AFK lâu
 local function checkAFK()
     while true do
-        wait(60) -- Kiểm tra mỗi 60 giây
+        wait(60)
         local currentTime = os.clock()
         local totalAFKTime = currentTime - lastAFKTime
 
-        -- Nếu đang ở Blox Fruits
         if game.PlaceId == bloxFruitsID then
-            -- Kiểm tra nếu đủ 2-5 giờ trong Blox Fruits để nhảy game hot
             if totalAFKTime >= math.random(minBloxTime, maxBloxTime) then
                 print("⏳ Đã đủ thời gian AFK trong Blox Fruits, bắt đầu nhảy game hot!")
-                lastAFKTime = os.clock() -- Reset lại thời gian AFK khi nhảy game
+                lastAFKTime = os.clock()
                 saveData()
                 jumpGame()
             end
         else
-            -- Cập nhật lại thời gian đúng khi không ở Blox Fruits
             lastAFKTime = os.clock()
             saveData()
         end
@@ -258,7 +255,7 @@ local function autoSendFriendRequest()
                 print("Đã gửi yêu cầu kết bạn tới:", player.Name)
             end
         end
-        wait(10) -- Đợi 10 giây giữa các lần gửi yêu cầu
+        wait(10)
     end
 end
 
@@ -271,7 +268,7 @@ local function autoAcceptFriendRequests()
                 print("Đã chấp nhận yêu cầu kết bạn từ:", player.Name)
             end
         end
-        wait(10) -- Đợi 10 giây giữa các lần kiểm tra
+        wait(10)
     end
 end
 
