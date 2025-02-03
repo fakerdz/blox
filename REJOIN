@@ -3,12 +3,6 @@ local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
-local checkRadius = 30
-local positionCheckDelay = 180
-local checkDelay = 10
-local lastPosition = nil
-local timeStuck = 0
-
 local messagesList = {
     "Hi!", "What is your name?", "How are you?", "What's up?", "Hello!", "Anyone here?", "Good game!",
     "Want to team up?", "Add me as a friend!", "Let's play together!", "Can you teach me this game?", "Anyone want to chat?",
@@ -98,85 +92,6 @@ local function autoChat()
         wait(math.random(10, 120))
     end
 end
-
--- Function to change server
-local function hopToServer()
-    local success, errorMessage = pcall(function()
-        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-        local response = HttpService:JSONDecode(game:HttpGet(url))
-        local servers = {}
-        local minPlayers = nil
-
-        for _, server in ipairs(response.data) do
-            if server.id ~= game.JobId and server.playing < server.maxPlayers then
-                if minPlayers == nil or server.playing < minPlayers then
-                    minPlayers = server.playing
-                    servers = {server}
-                elseif server.playing == minPlayers then
-                    table.insert(servers, server)
-                end
-            end
-        end
-
-        if #servers > 0 then
-            local bestServer = servers[math.random(#servers)]
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer.id, LocalPlayer)
-        else
-            TeleportService:Teleport(game.PlaceId)
-        end
-    end)
-
-    if not success then
-        print("Error teleporting: " .. errorMessage)
-        TeleportService:Teleport(game.PlaceId)
-    end
-end
-
--- Check if stuck in position
-local function checkStuck()
-    local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
-    if myPosition then
-        if lastPosition and (myPosition - lastPosition).Magnitude < 1 then
-            timeStuck = timeStuck + checkDelay
-            if timeStuck >= positionCheckDelay then
-                hopToServer()
-            end
-        else
-            timeStuck = 0
-        end
-        lastPosition = myPosition
-    end
-end
-
--- Check if near other players
-local function isNearPlayer()
-    local myPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
-    if myPosition then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                local distance = (myPosition - player.Character.HumanoidRootPart.Position).Magnitude
-                if distance <= checkRadius then
-                    return true
-                end
-            end
-        end
-    end
-    return false
-end
-
--- Main loop to handle player proximity and stuck position
-spawn(function()
-    while true do
-        if isNearPlayer() then
-            print("Player nearby detected! Switching server after 60 seconds.")
-            task.wait(60) -- Delay 60 seconds before switching server
-            hopToServer()
-        end
-
-        checkStuck()
-        task.wait(checkDelay)
-    end
-end)
 
 -- Start auto functions
 spawn(autoSendFriendRequest)
