@@ -3,7 +3,7 @@ task.wait(30)
 -- ⚙️ Cấu hình
 local checkDelay = 60
 local stuckTimeout = 60
-local noLevelUpTimeout = 180
+local noLevelUpTimeout = 600
 local nearbyRadius = 30
 local levelMax = 2650
 
