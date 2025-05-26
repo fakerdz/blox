@@ -32,3 +32,5 @@ getgenv().Configs = {
     ["Buy Stuffs"] = true -- buso, geppo, soru, ken haki, ...
 }
 repeat task.wait(1) pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Xero2409/XeroHub/refs/heads/main/kaitun.lua"))() end) until getgenv().Check_Execute
+task.wait(20)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/fakerdz/blox/refs/heads/main/rejoinlow"))()
