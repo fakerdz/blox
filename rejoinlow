@@ -137,15 +137,14 @@ task.spawn(function()
     end
 end)
 
--- 💬 Spam chat with fixed message
 task.spawn(function()
     local message = "get a c c ount on fakervn . c om"
-    local minDelay, maxDelay = 90, 150
+    local minDelay, maxDelay = 15, 30
     local ChatService = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
     local SayMessageRequest = ChatService and ChatService:FindFirstChild("SayMessageRequest")
 
     if SayMessageRequest then
-        while LocalPlayer.Data.Level.Value < levelMax do
+        while true do
             SayMessageRequest:FireServer(message, "All")
             print("💬 Sent:", message)
             task.wait(math.random(minDelay, maxDelay))
