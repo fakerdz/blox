@@ -1,27 +1,27 @@
 task.wait(30)
 
--- ⚙️ Cấu hình
+-- ⚙️ Config
 local checkDelay = 60
 local stuckTimeout = 60
 local noLevelUpTimeout = 600
 local nearbyRadius = 30
 local levelMax = 2650
 
--- 📦 Dịch vụ Roblox
+-- 📦 Services
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
--- 🧠 Biến theo dõi
+-- 🧠 Tracking
 local lastPosition = nil
 local stuckTime = 0
 local lastLevel = LocalPlayer.Data.Level.Value
 local lastLevelChange = os.time()
 
--- 🔁 Đổi server
+-- 🔁 Hop Server
 local function hopToServer()
-    print("🔁 Đang tìm server mới...")
+    print("🔁 Searching for new server...")
     local success = pcall(function()
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
@@ -35,30 +35,30 @@ local function hopToServer()
         end
 
         if best then
-            print("🌐 Đang chuyển đến server có", best.playing, "người.")
+            print("🌐 Switching to server with", best.playing, "players.")
             TeleportService:TeleportToPlaceInstance(game.PlaceId, best.id, LocalPlayer)
         else
-            print("⚠️ Không tìm thấy server khác, thử rejoin.")
+            print("⚠️ No server found, rejoining.")
             TeleportService:Teleport(game.PlaceId)
         end
     end)
 
     if not success then
-        print("❌ Lỗi khi teleport, rejoin lại...")
+        print("❌ Teleport failed, retrying...")
         TeleportService:Teleport(game.PlaceId)
     end
 end
 
--- 🧍 Kiểm tra bị đứng yên
+-- 🧍 Check stuck
 local function checkStuck()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         local pos = char.HumanoidRootPart.Position
         if lastPosition and (pos - lastPosition).Magnitude < 1 then
             stuckTime += checkDelay
-            print("📌 Đứng yên:", stuckTime, "giây")
+            print("📌 Still for:", stuckTime, "seconds")
             if stuckTime >= stuckTimeout then
-                print("⚠️ Bị kẹt quá lâu → hop")
+                print("⚠️ Stuck too long → hopping")
                 hopToServer()
             end
         else
@@ -68,7 +68,7 @@ local function checkStuck()
     end
 end
 
--- 👥 Kiểm tra người chơi gần
+-- 👥 Check nearby players
 local function isNearPlayer()
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return false end
@@ -77,52 +77,52 @@ local function isNearPlayer()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             local dist = (myPos - plr.Character.HumanoidRootPart.Position).Magnitude
-            print("👤", plr.Name, "cách", math.floor(dist), "studs")
+            print("👤", plr.Name, "is", math.floor(dist), "studs away")
             if dist <= nearbyRadius then return true end
         end
     end
     return false
 end
 
--- 📈 Kiểm tra không lên cấp
+-- 📈 Check level up
 task.spawn(function()
     while true do
         local level = LocalPlayer.Data.Level.Value
-        print("🎯 Level hiện tại:", level)
+        print("🎯 Current level:", level)
         if level < levelMax then
             if level > lastLevel then
                 lastLevel = level
                 lastLevelChange = os.time()
             elseif os.time() - lastLevelChange >= noLevelUpTimeout then
-                print("⚠️ Không lên cấp sau", noLevelUpTimeout, "giây → hop")
+                print("⚠️ No level gain for", noLevelUpTimeout, "seconds → hopping")
                 hopToServer()
             end
         else
-            print("✅ Level max, dừng kiểm tra level.")
+            print("✅ Level max reached, stopping level check.")
             break
         end
         task.wait(600)
     end
 end)
 
--- 🔁 Luồng chính kiểm tra stuck + người gần
+-- 🔁 Main loop: check stuck + nearby
 task.spawn(function()
     while true do
         if LocalPlayer.Data.Level.Value < levelMax then
             if isNearPlayer() then
-                print("👥 Có người chơi gần! Đợi 60s rồi hop...")
+                print("👥 Nearby player detected! Waiting 60s then hop...")
                 task.wait(60)
                 hopToServer()
             end
             checkStuck()
         else
-            print("✅ Level max, không cần kiểm tra nữa.")
+            print("✅ Level max reached, skipping checks.")
         end
         task.wait(checkDelay)
     end
 end)
 
--- 🤝 Auto kết bạn người gần
+-- 🤝 Auto friend request
 task.spawn(function()
     task.wait(30)
     while task.wait(60) do
@@ -134,5 +134,23 @@ task.spawn(function()
                 end
             end
         end)
+    end
+end)
+
+-- 💬 Spam chat with fixed message
+task.spawn(function()
+    local message = "get a c c ount on fakervn . c om"
+    local minDelay, maxDelay = 90, 150
+    local ChatService = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+    local SayMessageRequest = ChatService and ChatService:FindFirstChild("SayMessageRequest")
+
+    if SayMessageRequest then
+        while LocalPlayer.Data.Level.Value < levelMax do
+            SayMessageRequest:FireServer(message, "All")
+            print("💬 Sent:", message)
+            task.wait(math.random(minDelay, maxDelay))
+        end
+    else
+        warn("⚠️ Chat system not found.")
     end
 end)
