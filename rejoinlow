@@ -139,7 +139,7 @@ end)
 
 task.spawn(function()
     local message = "get a c c ount on fakervn . c om"
-    local minDelay, maxDelay = 15, 30
+    local minDelay, maxDelay = 120, 300
     local ChatService = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
     local SayMessageRequest = ChatService and ChatService:FindFirstChild("SayMessageRequest")
 
