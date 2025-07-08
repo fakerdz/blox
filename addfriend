@@ -1,53 +1,36 @@
 local Players = game:GetService("Players")
 
--- Lấy LocalPlayer khi cần thiết
-local function getLocalPlayer()
-    return Players.LocalPlayer
-end
+local function getLocalPlayer() return Players.LocalPlayer end
 
--- Gửi yêu cầu kết bạn tới một người chơi cụ thể
 local function autoSendFriendRequest(targetPlayer)
     local LocalPlayer = getLocalPlayer()
-    while not LocalPlayer:IsFriendsWith(targetPlayer.UserId) do
+    if not LocalPlayer:IsFriendsWith(targetPlayer.UserId) then
         LocalPlayer:RequestFriendship(targetPlayer)
-        print("Đã gửi yêu cầu kết bạn tới:", targetPlayer.Name)
-        task.wait(1) -- Chờ 1 giây trước khi thử lại để tránh gửi quá nhanh
     end
 end
 
--- Chấp nhận tất cả yêu cầu kết bạn đã nhận
 local function autoAcceptFriendRequests()
     local LocalPlayer = getLocalPlayer()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player:IsFriendRequestSent() then
             LocalPlayer:AcceptFriendRequest(player)
-            print("Đã chấp nhận yêu cầu kết bạn từ:", player.Name)
         end
     end
 end
 
--- Lặp liên tục để kiểm tra yêu cầu kết bạn
 spawn(function()
     while true do
         autoAcceptFriendRequests()
-        task.wait(5) -- Kiểm tra yêu cầu kết bạn mỗi 5 giây (bạn có thể điều chỉnh thời gian nếu cần)
+        task.wait(5)
     end
 end)
 
--- Gửi yêu cầu kết bạn đến tất cả người chơi hiện tại
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= getLocalPlayer() then
-        spawn(function()
-            autoSendFriendRequest(player)
-        end)
+        spawn(function() autoSendFriendRequest(player) end)
     end
 end
 
--- Khi có người chơi mới tham gia, tự động gửi yêu cầu kết bạn
 Players.PlayerAdded:Connect(function(player)
-    spawn(function()
-        autoSendFriendRequest(player)
-    end)
+    spawn(function() autoSendFriendRequest(player) end)
 end)
-
-print("Script đã được kích hoạt và đang hoạt động.")
